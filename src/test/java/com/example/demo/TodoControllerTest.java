@@ -37,4 +37,11 @@ class TodoControllerTest {
 				.andExpect(status().isOk())
 				.andExpect(view().name("todo/confirm"));
 	}
+
+	@Test
+	void completeReturnsCompleteView() throws Exception {
+		mockMvc.perform(get("/todo/complete"))
+				.andExpect(status().isOk())
+				.andExpect(view().name("todo/complete"));
+	}
 }
