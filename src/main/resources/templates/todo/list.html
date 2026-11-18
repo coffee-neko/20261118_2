@@ -16,7 +16,7 @@
         <a class="btn btn-primary" th:href="@{/todo/new}">新規登録</a>
     </div>
 
-    <div class="card shadow-sm">
+    <div class="card shadow-sm" th:if="${not #lists.isEmpty(todos)}">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
@@ -36,13 +36,19 @@
                               th:text="${todo.completed} ? '完了' : '未完了'">未完了</span>
                     </td>
                 </tr>
-                <tr th:if="${#lists.isEmpty(todos)}">
-                    <td colspan="3" class="text-center text-muted py-4">ToDo はありません。</td>
-                </tr>
                 </tbody>
             </table>
         </div>
     </div>
+
+    <section class="card border-0 shadow-sm text-center" th:unless="${not #lists.isEmpty(todos)}">
+        <div class="card-body p-5">
+            <div class="display-5 text-primary mb-3" aria-hidden="true">✓</div>
+            <h2 class="h4">ToDoがまだ登録されていません</h2>
+            <p class="text-muted mb-4">最初のToDoを作成して、やることを管理しましょう。</p>
+            <a class="btn btn-primary" th:href="@{/todo/new}">新規作成</a>
+        </div>
+    </section>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
