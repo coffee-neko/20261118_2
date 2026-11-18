@@ -25,5 +25,8 @@ class TodoMapperTest {
 		assertNotNull(todo.getId());
 		assertTrue(todoMapper.findAll().stream()
 				.anyMatch(savedTodo -> savedTodo.getId().equals(todo.getId())));
+		assertEquals(1, todoMapper.deleteById(todo.getId()));
+		assertTrue(todoMapper.findAll().stream()
+				.noneMatch(savedTodo -> savedTodo.getId().equals(todo.getId())));
 	}
 }
