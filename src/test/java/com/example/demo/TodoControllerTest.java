@@ -117,4 +117,21 @@ class TodoControllerTest {
 			todoMapper.deleteById(todo.getId());
 		}
 	}
+
+	@Test
+	void toggleCompletedRedirectsToTodoList() throws Exception {
+		Todo todo = new Todo();
+		todo.setTitle("Toggle target");
+		todo.setCompleted(false);
+		todoMapper.insert(todo);
+
+		try {
+			mockMvc.perform(post("/todo/{id}/toggle", todo.getId()))
+					.andExpect(status().is3xxRedirection())
+					.andExpect(redirectedUrl("/todo"));
+			assertEquals(true, todoMapper.findById(todo.getId()).getCompleted());
+		} finally {
+			todoMapper.deleteById(todo.getId());
+		}
+	}
 }
