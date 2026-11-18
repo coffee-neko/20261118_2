@@ -17,8 +17,14 @@
 
             <div class="card shadow-sm mb-4">
                 <div class="card-body p-4">
-                    <h2 class="h5 card-title">タイトル</h2>
-                    <p class="card-text mb-0">サンプルタスク</p>
+                    <dl class="mb-0">
+                        <dt>タイトル</dt>
+                        <dd th:text="${title}">サンプルタスク</dd>
+                        <dt>説明</dt>
+                        <dd th:text="${description}">サンプル説明</dd>
+                        <dt>状態</dt>
+                        <dd th:text="${done} ? '完了' : '未完了'">未完了</dd>
+                    </dl>
                 </div>
             </div>
 

@@ -6,6 +6,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
@@ -28,7 +29,7 @@ class TodoControllerTest {
 	void newTodoReturnsNewView() throws Exception {
 		mockMvc.perform(get("/todo/new"))
 				.andExpect(status().isOk())
-				.andExpect(view().name("todo/new"));
+				.andExpect(view().name("todo/form"));
 	}
 
 	@Test
@@ -36,6 +37,19 @@ class TodoControllerTest {
 		mockMvc.perform(get("/todo/confirm"))
 				.andExpect(status().isOk())
 				.andExpect(view().name("todo/confirm"));
+	}
+
+	@Test
+	void confirmReceivesFormParameters() throws Exception {
+		mockMvc.perform(post("/todo/confirm")
+				.param("title", "Sample task")
+				.param("description", "Sample description")
+				.param("done", "true"))
+				.andExpect(status().isOk())
+				.andExpect(view().name("todo/confirm"))
+				.andExpect(model().attribute("title", "Sample task"))
+				.andExpect(model().attribute("description", "Sample description"))
+				.andExpect(model().attribute("done", true));
 	}
 
 	@Test
