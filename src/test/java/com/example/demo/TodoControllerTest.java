@@ -8,9 +8,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
@@ -96,5 +98,23 @@ class TodoControllerTest {
 		mockMvc.perform(post("/todo/1/delete"))
 				.andExpect(status().is3xxRedirection())
 				.andExpect(redirectedUrl("/todo"));
+	}
+
+	@Test
+	void updateRedirectsToTodoListWithSuccessMessage() throws Exception {
+		Todo todo = new Todo();
+		todo.setTitle("Before update");
+		todo.setCompleted(false);
+		todoMapper.insert(todo);
+
+		try {
+			mockMvc.perform(post("/todo/{id}/update", todo.getId()).param("title", "After update"))
+					.andExpect(status().is3xxRedirection())
+					.andExpect(redirectedUrl("/todo"))
+					.andExpect(flash().attribute("successMessage", "更新が完了しました"));
+			assertEquals("After update", todoMapper.findById(todo.getId()).getTitle());
+		} finally {
+			todoMapper.deleteById(todo.getId());
+		}
 	}
 }

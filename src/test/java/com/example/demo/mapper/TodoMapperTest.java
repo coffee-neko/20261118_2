@@ -24,6 +24,11 @@ class TodoMapperTest {
 		assertEquals(1, todoMapper.insert(todo));
 		assertNotNull(todo.getId());
 		assertEquals("MyBatis task", todoMapper.findById(todo.getId()).getTitle());
+		todo.setTitle("Updated task");
+		todo.setCompleted(true);
+		assertEquals(1, todoMapper.update(todo));
+		assertEquals("Updated task", todoMapper.findById(todo.getId()).getTitle());
+		assertTrue(todoMapper.findById(todo.getId()).getCompleted());
 		assertTrue(todoMapper.findAll().stream()
 				.anyMatch(savedTodo -> savedTodo.getId().equals(todo.getId())));
 		assertEquals(1, todoMapper.deleteById(todo.getId()));
