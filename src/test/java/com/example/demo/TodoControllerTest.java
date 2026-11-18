@@ -9,6 +9,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
@@ -64,8 +65,7 @@ class TodoControllerTest {
 	@Test
 	void completeReceivesTitle() throws Exception {
 		mockMvc.perform(post("/todo/complete").param("title", "Sample task"))
-				.andExpect(status().isOk())
-				.andExpect(view().name("todo/complete"))
-				.andExpect(model().attribute("title", "Sample task"));
+				.andExpect(status().is3xxRedirection())
+				.andExpect(redirectedUrl("/todo"));
 	}
 }
