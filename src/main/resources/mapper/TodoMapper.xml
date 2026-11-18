@@ -19,19 +19,29 @@
     <select id="findPage" resultMap="todoResultMap">
         SELECT id, title, completed
         FROM todos
-        <if test="keyword != null and keyword != ''">
-            WHERE title LIKE CONCAT('%', #{keyword}, '%')
-        </if>
+        <where>
+            <if test="keyword != null and keyword != ''">
+                title LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+            <if test="completed != null">
+                AND completed = #{completed}
+            </if>
+        </where>
         ORDER BY id
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <select id="countByKeyword" resultType="long">
+    <select id="countByCondition" resultType="long">
         SELECT COUNT(*)
         FROM todos
-        <if test="keyword != null and keyword != ''">
-            WHERE title LIKE CONCAT('%', #{keyword}, '%')
-        </if>
+        <where>
+            <if test="keyword != null and keyword != ''">
+                title LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+            <if test="completed != null">
+                AND completed = #{completed}
+            </if>
+        </where>
     </select>
 
     <select id="findById" parameterType="java.lang.Long" resultMap="todoResultMap">

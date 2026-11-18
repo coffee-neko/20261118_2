@@ -32,9 +32,17 @@
                 <input id="keyword" name="keyword" type="search" class="form-control"
                        th:value="${keyword}" placeholder="キーワードを入力">
             </div>
+            <div class="col-md-3">
+                <label for="status" class="form-label">状態で絞り込み</label>
+                <select id="status" name="status" class="form-select">
+                    <option value="all" th:selected="${status == 'all'}">すべて</option>
+                    <option value="incomplete" th:selected="${status == 'incomplete'}">未完了</option>
+                    <option value="completed" th:selected="${status == 'completed'}">完了</option>
+                </select>
+            </div>
             <div class="col-md-auto d-flex gap-2">
                 <button type="submit" class="btn btn-primary">検索</button>
-                <a class="btn btn-outline-secondary" th:href="@{/todo}">クリア</a>
+                <a class="btn btn-outline-secondary" th:href="@{/todo}">条件をクリア</a>
             </div>
         </div>
     </form>
@@ -85,23 +93,23 @@
         <ul class="pagination justify-content-center mb-0">
             <li class="page-item" th:classappend="${currentPage == 1} ? ' disabled'">
                 <a class="page-link" th:if="${currentPage > 1}"
-                   th:href="@{/todo(page=${currentPage - 1}, keyword=${keyword})}">前へ</a>
+                   th:href="@{/todo(page=${currentPage - 1}, keyword=${keyword}, status=${status})}">前へ</a>
                 <span class="page-link" th:unless="${currentPage > 1}">前へ</span>
             </li>
             <li class="page-item" th:each="pageNumber : ${#numbers.sequence(1, totalPages)}"
                 th:classappend="${pageNumber == currentPage} ? ' active'">
-                <a class="page-link" th:href="@{/todo(page=${pageNumber}, keyword=${keyword})}"
+                <a class="page-link" th:href="@{/todo(page=${pageNumber}, keyword=${keyword}, status=${status})}"
                    th:text="${pageNumber}">1</a>
             </li>
             <li class="page-item" th:classappend="${currentPage == totalPages} ? ' disabled'">
                 <a class="page-link" th:if="${currentPage < totalPages}"
-                   th:href="@{/todo(page=${currentPage + 1}, keyword=${keyword})}">次へ</a>
+                   th:href="@{/todo(page=${currentPage + 1}, keyword=${keyword}, status=${status})}">次へ</a>
                 <span class="page-link" th:unless="${currentPage < totalPages}">次へ</span>
             </li>
         </ul>
     </nav>
 
-    <section class="card border-0 shadow-sm text-center" th:if="${#lists.isEmpty(todos) and keyword == ''}">
+    <section class="card border-0 shadow-sm text-center" th:if="${#lists.isEmpty(todos) and !hasSearchCondition}">
         <div class="card-body p-5">
             <div class="display-5 text-primary mb-3" aria-hidden="true">✓</div>
             <h2 class="h4">ToDoがまだ登録されていません</h2>
@@ -110,12 +118,12 @@
         </div>
     </section>
 
-    <section class="card border-0 shadow-sm text-center" th:if="${#lists.isEmpty(todos) and keyword != ''}">
+    <section class="card border-0 shadow-sm text-center" th:if="${#lists.isEmpty(todos) and hasSearchCondition}">
         <div class="card-body p-5">
             <div class="display-5 text-primary mb-3" aria-hidden="true">⌕</div>
             <h2 class="h4">該当するタスクがありません</h2>
             <p class="text-muted mb-4">別のキーワードで検索するか、検索条件をクリアしてください。</p>
-            <a class="btn btn-outline-secondary" th:href="@{/todo}">クリア</a>
+            <a class="btn btn-outline-secondary" th:href="@{/todo}">条件をクリア</a>
         </div>
     </section>
 </main>

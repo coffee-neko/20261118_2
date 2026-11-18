@@ -16,6 +16,9 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class TodoController {
 
 	private static final int PAGE_SIZE = 10;
+	private static final String STATUS_ALL = "all";
+	private static final String STATUS_INCOMPLETE = "incomplete";
+	private static final String STATUS_COMPLETED = "completed";
 
 	private final TodoService todoService;
 
@@ -25,8 +28,11 @@ public class TodoController {
 
 	@GetMapping
 	public String list(@RequestParam(defaultValue = "1") int page,
-			@RequestParam(defaultValue = "") String keyword, Model model) {
-		long totalCount = todoService.countByKeyword(keyword);
+			@RequestParam(defaultValue = "") String keyword,
+			@RequestParam(defaultValue = STATUS_ALL) String status, Model model) {
+		String selectedStatus = normalizeStatus(status);
+		Boolean completed = toCompleted(selectedStatus);
+		long totalCount = todoService.countByCondition(keyword, completed);
 		int totalPages = (int) Math.ceil((double) totalCount / PAGE_SIZE);
 		int currentPage = totalPages == 0 ? 1 : Math.min(Math.max(page, 1), totalPages);
 
@@ -34,14 +40,33 @@ public class TodoController {
 		long startItem = totalCount == 0 ? 0 : offset + 1L;
 		long endItem = Math.min(offset + PAGE_SIZE, totalCount);
 
-		model.addAttribute("todos", todoService.findPage(keyword, PAGE_SIZE, offset));
+		model.addAttribute("todos", todoService.findPage(keyword, completed, PAGE_SIZE, offset));
 		model.addAttribute("keyword", keyword);
+		model.addAttribute("status", selectedStatus);
+		model.addAttribute("hasSearchCondition", !keyword.isEmpty() || !STATUS_ALL.equals(selectedStatus));
 		model.addAttribute("currentPage", currentPage);
 		model.addAttribute("totalPages", totalPages);
 		model.addAttribute("totalCount", totalCount);
 		model.addAttribute("startItem", startItem);
 		model.addAttribute("endItem", endItem);
 		return "todo/list";
+	}
+
+	private String normalizeStatus(String status) {
+		if (STATUS_INCOMPLETE.equals(status) || STATUS_COMPLETED.equals(status)) {
+			return status;
+		}
+		return STATUS_ALL;
+	}
+
+	private Boolean toCompleted(String status) {
+		if (STATUS_INCOMPLETE.equals(status)) {
+			return false;
+		}
+		if (STATUS_COMPLETED.equals(status)) {
+			return true;
+		}
+		return null;
 	}
 
 	@GetMapping("/new")
