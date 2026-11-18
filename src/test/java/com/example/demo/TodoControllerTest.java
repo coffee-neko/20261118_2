@@ -30,4 +30,11 @@ class TodoControllerTest {
 				.andExpect(status().isOk())
 				.andExpect(view().name("todo/new"));
 	}
+
+	@Test
+	void confirmReturnsConfirmView() throws Exception {
+		mockMvc.perform(get("/todo/confirm"))
+				.andExpect(status().isOk())
+				.andExpect(view().name("todo/confirm"));
+	}
 }
