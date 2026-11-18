@@ -48,6 +48,12 @@ public class TodoController {
 		return "todo/complete";
 	}
 
+	@PostMapping("/complete")
+	public String complete(@RequestParam String title, Model model) {
+		model.addAttribute("title", title);
+		return "todo/complete";
+	}
+
 	public record TodoItem(int id, String title, boolean completed) {
 	}
 }

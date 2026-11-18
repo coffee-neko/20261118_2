@@ -17,21 +17,17 @@
 
             <div class="card shadow-sm mb-4">
                 <div class="card-body p-4">
-                    <dl class="mb-0">
-                        <dt>タイトル</dt>
-                        <dd th:text="${title}">サンプルタスク</dd>
-                        <dt>説明</dt>
-                        <dd th:text="${description}">サンプル説明</dd>
-                        <dt>状態</dt>
-                        <dd th:text="${done} ? '完了' : '未完了'">未完了</dd>
-                    </dl>
+                    <label for="display-title" class="form-label">タイトル</label>
+                    <input id="display-title" type="text" class="form-control-plaintext"
+                           th:value="${title}" value="サンプルタスク" readonly>
                 </div>
             </div>
 
-            <div class="d-flex justify-content-between">
-                <a class="btn btn-outline-secondary" th:href="@{/todo/new}">戻る</a>
-                <a class="btn btn-primary" th:href="@{/todo/complete}">登録</a>
-            </div>
+            <form th:action="@{/todo/complete}" method="post" class="d-flex gap-2">
+                <input type="hidden" name="title" th:value="${title}">
+                <button type="button" class="btn btn-outline-secondary" onclick="history.back()">戻る</button>
+                <button type="submit" class="btn btn-primary">登録</button>
+            </form>
         </div>
     </div>
 </main>
