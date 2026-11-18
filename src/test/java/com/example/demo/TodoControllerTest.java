@@ -1,5 +1,7 @@
 package com.example.demo;
 
+import com.example.demo.mapper.TodoMapper;
+import com.example.demo.model.Todo;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -20,6 +22,9 @@ class TodoControllerTest {
 	@Autowired
 	private MockMvc mockMvc;
 
+	@Autowired
+	private TodoMapper todoMapper;
+
 	@Test
 	void todoListReturnsListView() throws Exception {
 		mockMvc.perform(get("/todo"))
@@ -33,6 +38,23 @@ class TodoControllerTest {
 		mockMvc.perform(get("/todo/new"))
 				.andExpect(status().isOk())
 				.andExpect(view().name("todo/form"));
+	}
+
+	@Test
+	void editReturnsEditView() throws Exception {
+		Todo todo = new Todo();
+		todo.setTitle("Edit target");
+		todo.setCompleted(false);
+		todoMapper.insert(todo);
+
+		try {
+			mockMvc.perform(get("/todo/{id}/edit", todo.getId()))
+					.andExpect(status().isOk())
+					.andExpect(view().name("todo/edit"))
+					.andExpect(model().attribute("todo", todo));
+		} finally {
+			todoMapper.deleteById(todo.getId());
+		}
 	}
 
 	@Test

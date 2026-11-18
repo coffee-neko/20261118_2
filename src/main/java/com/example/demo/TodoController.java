@@ -32,6 +32,16 @@ public class TodoController {
 		return "todo/form";
 	}
 
+	@GetMapping("/{id}/edit")
+	public String edit(@PathVariable Long id, Model model) {
+		Todo todo = todoService.findById(id);
+		if (todo == null) {
+			return "redirect:/todo";
+		}
+		model.addAttribute("todo", todo);
+		return "todo/edit";
+	}
+
 	@GetMapping("/confirm")
 	public String confirm() {
 		return "todo/confirm";
