@@ -21,4 +21,9 @@
         INSERT INTO todos (title, completed)
         VALUES (#{title}, #{completed})
     </insert>
+
+    <delete id="deleteById" parameterType="java.lang.Long">
+        DELETE FROM todos
+        WHERE id = #{id}
+    </delete>
 </mapper>

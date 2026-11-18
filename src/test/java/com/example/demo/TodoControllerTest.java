@@ -68,4 +68,11 @@ class TodoControllerTest {
 				.andExpect(status().is3xxRedirection())
 				.andExpect(redirectedUrl("/todo"));
 	}
+
+	@Test
+	void deleteRedirectsToTodoList() throws Exception {
+		mockMvc.perform(post("/todo/1/delete"))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(redirectedUrl("/todo"));
+	}
 }
