@@ -23,4 +23,11 @@ class TodoControllerTest {
 				.andExpect(view().name("todo/list"))
 				.andExpect(model().attributeExists("todos"));
 	}
+
+	@Test
+	void newTodoReturnsNewView() throws Exception {
+		mockMvc.perform(get("/todo/new"))
+				.andExpect(status().isOk())
+				.andExpect(view().name("todo/new"));
+	}
 }

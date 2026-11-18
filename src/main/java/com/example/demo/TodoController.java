@@ -19,6 +19,11 @@ public class TodoController {
 		return "todo/list";
 	}
 
+	@GetMapping("/new")
+	public String newTodo() {
+		return "todo/new";
+	}
+
 	public record TodoItem(int id, String title, boolean completed) {
 	}
 }
