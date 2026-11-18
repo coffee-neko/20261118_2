@@ -24,20 +24,18 @@ public class TodoController {
 	}
 
 	@GetMapping
-	public String list(@RequestParam(defaultValue = "1") int page, Model model) {
-		long totalCount = todoService.countAll();
+	public String list(@RequestParam(defaultValue = "1") int page,
+			@RequestParam(defaultValue = "") String keyword, Model model) {
+		long totalCount = todoService.countByKeyword(keyword);
 		int totalPages = (int) Math.ceil((double) totalCount / PAGE_SIZE);
-		int currentPage = Math.max(page, 1);
-
-		if (totalPages > 0) {
-			currentPage = Math.min(currentPage, totalPages);
-		}
+		int currentPage = totalPages == 0 ? 1 : Math.min(Math.max(page, 1), totalPages);
 
 		int offset = (currentPage - 1) * PAGE_SIZE;
 		long startItem = totalCount == 0 ? 0 : offset + 1L;
 		long endItem = Math.min(offset + PAGE_SIZE, totalCount);
 
-		model.addAttribute("todos", todoService.findPage(PAGE_SIZE, offset));
+		model.addAttribute("todos", todoService.findPage(keyword, PAGE_SIZE, offset));
+		model.addAttribute("keyword", keyword);
 		model.addAttribute("currentPage", currentPage);
 		model.addAttribute("totalPages", totalPages);
 		model.addAttribute("totalCount", totalCount);

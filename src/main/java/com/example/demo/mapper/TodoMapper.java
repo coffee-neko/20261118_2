@@ -9,9 +9,10 @@ public interface TodoMapper {
 
 	List<Todo> findAll();
 
-	List<Todo> findPage(@Param("limit") int limit, @Param("offset") int offset);
+	List<Todo> findPage(@Param("keyword") String keyword,
+			@Param("limit") int limit, @Param("offset") int offset);
 
-	long countAll();
+	long countByKeyword(@Param("keyword") String keyword);
 
 	Todo findById(Long id);
 
