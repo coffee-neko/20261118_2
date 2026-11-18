@@ -23,6 +23,14 @@ public class TodoService {
 		return todoMapper.findAll();
 	}
 
+	public List<Todo> findPage(int limit, int offset) {
+		return todoMapper.findPage(limit, offset);
+	}
+
+	public long countAll() {
+		return todoMapper.countAll();
+	}
+
 	public Todo findById(Long id) {
 		return todoMapper.findById(id);
 	}

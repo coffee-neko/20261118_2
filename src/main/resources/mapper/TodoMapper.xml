@@ -16,6 +16,18 @@
         ORDER BY id
     </select>
 
+    <select id="findPage" resultMap="todoResultMap">
+        SELECT id, title, completed
+        FROM todos
+        ORDER BY id
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countAll" resultType="long">
+        SELECT COUNT(*)
+        FROM todos
+    </select>
+
     <select id="findById" parameterType="java.lang.Long" resultMap="todoResultMap">
         SELECT id, title, completed
         FROM todos

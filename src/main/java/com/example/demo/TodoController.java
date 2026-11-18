@@ -15,6 +15,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequestMapping("/todo")
 public class TodoController {
 
+	private static final int PAGE_SIZE = 10;
+
 	private final TodoService todoService;
 
 	public TodoController(TodoService todoService) {
@@ -22,8 +24,25 @@ public class TodoController {
 	}
 
 	@GetMapping
-	public String list(Model model) {
-		model.addAttribute("todos", todoService.findAll());
+	public String list(@RequestParam(defaultValue = "1") int page, Model model) {
+		long totalCount = todoService.countAll();
+		int totalPages = (int) Math.ceil((double) totalCount / PAGE_SIZE);
+		int currentPage = Math.max(page, 1);
+
+		if (totalPages > 0) {
+			currentPage = Math.min(currentPage, totalPages);
+		}
+
+		int offset = (currentPage - 1) * PAGE_SIZE;
+		long startItem = totalCount == 0 ? 0 : offset + 1L;
+		long endItem = Math.min(offset + PAGE_SIZE, totalCount);
+
+		model.addAttribute("todos", todoService.findPage(PAGE_SIZE, offset));
+		model.addAttribute("currentPage", currentPage);
+		model.addAttribute("totalPages", totalPages);
+		model.addAttribute("totalCount", totalCount);
+		model.addAttribute("startItem", startItem);
+		model.addAttribute("endItem", endItem);
 		return "todo/list";
 	}
 
