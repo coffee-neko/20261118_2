@@ -1,7 +1,5 @@
 package com.example.demo;
 
-import java.util.List;
-
 import com.example.demo.model.Todo;
 import com.example.demo.service.TodoService;
 import org.springframework.stereotype.Controller;
@@ -23,9 +21,7 @@ public class TodoController {
 
 	@GetMapping
 	public String list(Model model) {
-		model.addAttribute("todos", List.of(
-				new TodoItem(1, "Spring Boot を学習する", false),
-				new TodoItem(2, "ToDo アプリを作成する", true)));
+		model.addAttribute("todos", todoService.findAll());
 		return "todo/list";
 	}
 
@@ -63,8 +59,5 @@ public class TodoController {
 		todo.setCompleted(false);
 		todoService.create(todo);
 		return "redirect:/todo";
-	}
-
-	public record TodoItem(int id, String title, boolean completed) {
 	}
 }
