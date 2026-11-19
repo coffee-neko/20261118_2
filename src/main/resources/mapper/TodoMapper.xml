@@ -68,6 +68,17 @@
         </where>
     </select>
 
+    <select id="countAll" resultType="long">
+        SELECT COUNT(*)
+        FROM todos
+    </select>
+
+    <select id="countCompleted" resultType="long">
+        SELECT COUNT(*)
+        FROM todos
+        WHERE completed = TRUE
+    </select>
+
     <select id="findById" parameterType="java.lang.Long" resultMap="todoResultMap">
         SELECT t.id, t.title, t.completed, t.display_order, t.category_id, t.assignee_id,
                c.name AS category_name, c.color AS category_color, a.name AS assignee_name

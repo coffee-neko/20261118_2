@@ -35,6 +35,10 @@ public class TodoController {
 		String selectedStatus = normalizeStatus(status);
 		Boolean completed = toCompleted(selectedStatus);
 		long totalCount = todoService.countByCondition(keyword, completed, categoryId, assigneeId);
+		long allTodoCount = todoService.countAll();
+		long completedTodoCount = todoService.countCompleted();
+		int completionRate = allTodoCount == 0 ? 0
+				: (int) Math.round((double) completedTodoCount * 100 / allTodoCount);
 		int totalPages = (int) Math.ceil((double) totalCount / PAGE_SIZE);
 		int currentPage = totalPages == 0 ? 1 : Math.min(Math.max(page, 1), totalPages);
 
@@ -54,6 +58,9 @@ public class TodoController {
 		model.addAttribute("currentPage", currentPage);
 		model.addAttribute("totalPages", totalPages);
 		model.addAttribute("totalCount", totalCount);
+		model.addAttribute("allTodoCount", allTodoCount);
+		model.addAttribute("completedTodoCount", completedTodoCount);
+		model.addAttribute("completionRate", completionRate);
 		model.addAttribute("startItem", startItem);
 		model.addAttribute("endItem", endItem);
 		return "todo/list";

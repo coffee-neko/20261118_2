@@ -47,6 +47,14 @@ public class TodoService {
 		return todoMapper.countByCondition(keyword, completed, categoryId, assigneeId);
 	}
 
+	public long countAll() {
+		return todoMapper.countAll();
+	}
+
+	public long countCompleted() {
+		return todoMapper.countCompleted();
+	}
+
 	public List<Category> findAllCategories() {
 		return categoryMapper.findAll();
 	}

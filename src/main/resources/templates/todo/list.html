@@ -78,6 +78,22 @@
         </div>
     </form>
 
+    <section class="card shadow-sm mb-4" aria-labelledby="quest-progress-title">
+        <div class="card-body">
+            <h2 id="quest-progress-title" class="h5 mb-3">クエスト達成率</h2>
+            <p class="mb-2">
+                全タスク <span th:text="${allTodoCount}">0</span>件 ／
+                完了 <span th:text="${completedTodoCount}">0</span>件
+                （<span th:text="${completionRate}">0</span>%）
+            </p>
+            <div class="progress" role="progressbar" aria-label="クエスト達成率"
+                 aria-valuemin="0" aria-valuemax="100" th:attr="aria-valuenow=${completionRate}">
+                <div class="progress-bar" th:style="|width: ${completionRate}%;|"
+                     th:text="|${completionRate}%|">0%</div>
+            </div>
+        </div>
+    </section>
+
     <p class="text-muted mb-3" th:text="|全${totalCount}件中 ${startItem}～${endItem}件|">
         全0件中 0～0件
     </p>

@@ -16,6 +16,10 @@ public interface TodoMapper {
 	long countByCondition(@Param("keyword") String keyword, @Param("completed") Boolean completed,
 			@Param("categoryId") Long categoryId, @Param("assigneeId") Long assigneeId);
 
+	long countAll();
+
+	long countCompleted();
+
 	Todo findById(Long id);
 
 	Integer findMaxDisplayOrder();
