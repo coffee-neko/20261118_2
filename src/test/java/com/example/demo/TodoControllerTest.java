@@ -6,11 +6,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
@@ -19,6 +22,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@ActiveProfiles("test")
+@WithMockUser
 class TodoControllerTest {
 
 	@Autowired
@@ -69,7 +74,7 @@ class TodoControllerTest {
 
 	@Test
 	void confirmReceivesFormParameters() throws Exception {
-		mockMvc.perform(post("/todo/confirm")
+		mockMvc.perform(post("/todo/confirm").with(csrf())
 				.param("title", "Sample task")
 				.param("description", "Sample description")
 				.param("done", "true"))
@@ -89,14 +94,14 @@ class TodoControllerTest {
 
 	@Test
 	void completeReceivesTitle() throws Exception {
-		mockMvc.perform(post("/todo/complete").param("title", "Sample task"))
+		mockMvc.perform(post("/todo/complete").with(csrf()).param("title", "Sample task"))
 				.andExpect(status().is3xxRedirection())
 				.andExpect(redirectedUrl("/todo"));
 	}
 
 	@Test
 	void deleteRedirectsToTodoList() throws Exception {
-		mockMvc.perform(post("/todo/1/delete"))
+		mockMvc.perform(post("/todo/1/delete").with(csrf()))
 				.andExpect(status().is3xxRedirection())
 				.andExpect(redirectedUrl("/todo"));
 	}
@@ -110,7 +115,7 @@ class TodoControllerTest {
 		todoMapper.insert(todo);
 
 		try {
-			mockMvc.perform(post("/todo/{id}/update", todo.getId()).param("title", "After update"))
+			mockMvc.perform(post("/todo/{id}/update", todo.getId()).with(csrf()).param("title", "After update"))
 					.andExpect(status().is3xxRedirection())
 					.andExpect(redirectedUrl("/todo"))
 					.andExpect(flash().attribute("successMessage", "更新が完了しました"));
@@ -128,7 +133,7 @@ class TodoControllerTest {
 		todoMapper.insert(todo);
 
 		try {
-			mockMvc.perform(post("/todo/{id}/toggle", todo.getId()))
+			mockMvc.perform(post("/todo/{id}/toggle", todo.getId()).with(csrf()))
 					.andExpect(status().is3xxRedirection())
 					.andExpect(redirectedUrl("/todo"));
 			assertEquals(true, todoMapper.findById(todo.getId()).getCompleted());

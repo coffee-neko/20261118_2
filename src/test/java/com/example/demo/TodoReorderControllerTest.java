@@ -12,14 +12,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@ActiveProfiles("test")
+@WithMockUser
 class TodoReorderControllerTest {
 
 	@Autowired
@@ -34,7 +39,7 @@ class TodoReorderControllerTest {
 		List<Long> reorderedIds = new ArrayList<>(todos.stream().map(Todo::getId).toList());
 		Collections.reverse(reorderedIds);
 
-		mockMvc.perform(put("/api/todo/reorder")
+		mockMvc.perform(put("/api/todo/reorder").with(csrf())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(requestBody(1, reorderedIds)))
 				.andExpect(status().isNoContent());
@@ -49,7 +54,7 @@ class TodoReorderControllerTest {
 		List<Long> duplicatedIds = todos.stream().map(Todo::getId).collect(Collectors.toList());
 		duplicatedIds.set(1, duplicatedIds.get(0));
 
-		mockMvc.perform(put("/api/todo/reorder")
+		mockMvc.perform(put("/api/todo/reorder").with(csrf())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(requestBody(1, duplicatedIds)))
 				.andExpect(status().isBadRequest());

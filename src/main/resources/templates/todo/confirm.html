@@ -24,6 +24,7 @@
             </div>
 
             <form th:action="@{/todo/complete}" method="post" class="d-flex gap-2">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
                 <input type="hidden" name="title" th:value="${title}">
                 <button type="button" class="btn btn-outline-secondary" onclick="history.back()">戻る</button>
                 <button type="submit" class="btn btn-primary">登録</button>
