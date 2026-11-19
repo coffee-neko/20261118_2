@@ -1,0 +1,11 @@
+.git
+.idea
+.vscode
+target
+build
+out
+
+# Local/editor artifacts
+*.iml
+*.log
+HELP.md
