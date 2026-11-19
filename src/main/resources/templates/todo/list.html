@@ -62,6 +62,15 @@
                             th:text="${category.name}">事前準備</option>
                 </select>
             </div>
+            <div class="col-md-3">
+                <label for="assigneeId" class="form-label">担当者で絞り込み</label>
+                <select id="assigneeId" name="assigneeId" class="form-select">
+                    <option value="" th:selected="${assigneeId == null}">すべての担当者</option>
+                    <option th:each="assignee : ${assignees}" th:value="${assignee.id}"
+                            th:selected="${assignee.id == assigneeId}"
+                            th:text="${assignee.name}">たろう</option>
+                </select>
+            </div>
             <div class="col-md-auto d-flex gap-2">
                 <button type="submit" class="btn btn-primary">検索</button>
                 <a class="btn btn-outline-secondary" th:href="@{/todo}">条件をクリア</a>
@@ -89,6 +98,7 @@
                     <th scope="col">ID</th>
                     <th scope="col">タイトル</th>
                     <th scope="col">カテゴリ</th>
+                    <th scope="col">担当者</th>
                     <th scope="col">状態</th>
                     <th scope="col">操作</th>
                 </tr>
@@ -105,6 +115,7 @@
                               th:text="${todo.categoryName}">事前準備</span>
                         <span th:unless="${todo.categoryName != null}" class="badge text-bg-secondary">未設定</span>
                     </td>
+                    <td th:text="${todo.assigneeName != null ? todo.assigneeName : '未設定'}">未設定</td>
                     <td>
                         <span class="badge"
                               th:classappend="${todo.completed} ? ' text-bg-success' : ' text-bg-secondary'"
@@ -133,17 +144,17 @@
         <ul class="pagination justify-content-center mb-0">
             <li class="page-item" th:classappend="${currentPage == 1} ? ' disabled'">
                 <a class="page-link" th:if="${currentPage > 1}"
-                   th:href="@{/todo(page=${currentPage - 1}, keyword=${keyword}, status=${status}, categoryId=${categoryId})}">前へ</a>
+                   th:href="@{/todo(page=${currentPage - 1}, keyword=${keyword}, status=${status}, categoryId=${categoryId}, assigneeId=${assigneeId})}">前へ</a>
                 <span class="page-link" th:unless="${currentPage > 1}">前へ</span>
             </li>
             <li class="page-item" th:each="pageNumber : ${#numbers.sequence(1, totalPages)}"
                 th:classappend="${pageNumber == currentPage} ? ' active'">
-                <a class="page-link" th:href="@{/todo(page=${pageNumber}, keyword=${keyword}, status=${status}, categoryId=${categoryId})}"
+                <a class="page-link" th:href="@{/todo(page=${pageNumber}, keyword=${keyword}, status=${status}, categoryId=${categoryId}, assigneeId=${assigneeId})}"
                    th:text="${pageNumber}">1</a>
             </li>
             <li class="page-item" th:classappend="${currentPage == totalPages} ? ' disabled'">
                 <a class="page-link" th:if="${currentPage < totalPages}"
-                   th:href="@{/todo(page=${currentPage + 1}, keyword=${keyword}, status=${status}, categoryId=${categoryId})}">次へ</a>
+                   th:href="@{/todo(page=${currentPage + 1}, keyword=${keyword}, status=${status}, categoryId=${categoryId}, assigneeId=${assigneeId})}">次へ</a>
                 <span class="page-link" th:unless="${currentPage < totalPages}">次へ</span>
             </li>
         </ul>

@@ -35,6 +35,16 @@
                             </select>
                         </div>
 
+                        <div class="mb-4">
+                            <label for="assigneeId" class="form-label">担当者</label>
+                            <select id="assigneeId" name="assigneeId" class="form-select">
+                                <option value="">未設定</option>
+                                <option th:each="assignee : ${assignees}" th:value="${assignee.id}"
+                                        th:selected="${assignee.id == todo.assigneeId}"
+                                        th:text="${assignee.name}">たろう</option>
+                            </select>
+                        </div>
+
                         <div class="d-flex gap-2">
                             <a class="btn btn-outline-secondary" th:href="@{/todo}">戻る</a>
                             <button type="submit" class="btn btn-primary">更新</button>

@@ -12,4 +12,6 @@ public class Todo {
 	private Long categoryId;
 	private String categoryName;
 	private String categoryColor;
+	private Long assigneeId;
+	private String assigneeName;
 }

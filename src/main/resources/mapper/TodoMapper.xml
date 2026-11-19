@@ -12,21 +12,25 @@
         <result property="categoryId" column="category_id"/>
         <result property="categoryName" column="category_name"/>
         <result property="categoryColor" column="category_color"/>
+        <result property="assigneeId" column="assignee_id"/>
+        <result property="assigneeName" column="assignee_name"/>
     </resultMap>
 
     <select id="findAll" resultMap="todoResultMap">
-        SELECT t.id, t.title, t.completed, t.display_order, t.category_id,
-               c.name AS category_name, c.color AS category_color
+        SELECT t.id, t.title, t.completed, t.display_order, t.category_id, t.assignee_id,
+               c.name AS category_name, c.color AS category_color, a.name AS assignee_name
         FROM todos t
         LEFT JOIN categories c ON c.id = t.category_id
+        LEFT JOIN assignees a ON a.id = t.assignee_id
         ORDER BY t.display_order, t.id
     </select>
 
     <select id="findPage" resultMap="todoResultMap">
-        SELECT t.id, t.title, t.completed, t.display_order, t.category_id,
-               c.name AS category_name, c.color AS category_color
+        SELECT t.id, t.title, t.completed, t.display_order, t.category_id, t.assignee_id,
+               c.name AS category_name, c.color AS category_color, a.name AS assignee_name
         FROM todos t
         LEFT JOIN categories c ON c.id = t.category_id
+        LEFT JOIN assignees a ON a.id = t.assignee_id
         <where>
             <if test="keyword != null and keyword != ''">
                 t.title LIKE CONCAT('%', #{keyword}, '%')
@@ -36,6 +40,9 @@
             </if>
             <if test="categoryId != null">
                 AND t.category_id = #{categoryId}
+            </if>
+            <if test="assigneeId != null">
+                AND t.assignee_id = #{assigneeId}
             </if>
         </where>
         ORDER BY t.display_order, t.id
@@ -55,14 +62,18 @@
             <if test="categoryId != null">
                 AND t.category_id = #{categoryId}
             </if>
+            <if test="assigneeId != null">
+                AND t.assignee_id = #{assigneeId}
+            </if>
         </where>
     </select>
 
     <select id="findById" parameterType="java.lang.Long" resultMap="todoResultMap">
-        SELECT t.id, t.title, t.completed, t.display_order, t.category_id,
-               c.name AS category_name, c.color AS category_color
+        SELECT t.id, t.title, t.completed, t.display_order, t.category_id, t.assignee_id,
+               c.name AS category_name, c.color AS category_color, a.name AS assignee_name
         FROM todos t
         LEFT JOIN categories c ON c.id = t.category_id
+        LEFT JOIN assignees a ON a.id = t.assignee_id
         WHERE t.id = #{id}
     </select>
 
@@ -81,15 +92,16 @@
 
     <insert id="insert" parameterType="com.example.demo.model.Todo"
             useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO todos (title, completed, display_order, category_id)
-        VALUES (#{title}, #{completed}, #{displayOrder}, #{categoryId})
+        INSERT INTO todos (title, completed, display_order, category_id, assignee_id)
+        VALUES (#{title}, #{completed}, #{displayOrder}, #{categoryId}, #{assigneeId})
     </insert>
 
     <update id="update" parameterType="com.example.demo.model.Todo">
         UPDATE todos
         SET title = #{title},
             completed = #{completed},
-            category_id = #{categoryId}
+            category_id = #{categoryId},
+            assignee_id = #{assigneeId}
         WHERE id = #{id}
     </update>
 

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.demo.mapper.AssigneeMapper">
+
+    <select id="findAll" resultType="com.example.demo.model.Assignee">
+        SELECT id, name
+        FROM assignees
+        ORDER BY id
+    </select>
+
+    <select id="findById" parameterType="java.lang.Long" resultType="com.example.demo.model.Assignee">
+        SELECT id, name
+        FROM assignees
+        WHERE id = #{id}
+    </select>
+</mapper>

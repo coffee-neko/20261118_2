@@ -10,11 +10,11 @@ public interface TodoMapper {
 	List<Todo> findAll();
 
 	List<Todo> findPage(@Param("keyword") String keyword, @Param("completed") Boolean completed,
-			@Param("categoryId") Long categoryId,
+			@Param("categoryId") Long categoryId, @Param("assigneeId") Long assigneeId,
 			@Param("limit") int limit, @Param("offset") int offset);
 
 	long countByCondition(@Param("keyword") String keyword, @Param("completed") Boolean completed,
-			@Param("categoryId") Long categoryId);
+			@Param("categoryId") Long categoryId, @Param("assigneeId") Long assigneeId);
 
 	Todo findById(Long id);
 

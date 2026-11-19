@@ -30,10 +30,11 @@ public class TodoController {
 	public String list(@RequestParam(defaultValue = "1") int page,
 			@RequestParam(defaultValue = "") String keyword,
 			@RequestParam(defaultValue = STATUS_ALL) String status,
-			@RequestParam(required = false) Long categoryId, Model model) {
+			@RequestParam(required = false) Long categoryId,
+			@RequestParam(required = false) Long assigneeId, Model model) {
 		String selectedStatus = normalizeStatus(status);
 		Boolean completed = toCompleted(selectedStatus);
-		long totalCount = todoService.countByCondition(keyword, completed, categoryId);
+		long totalCount = todoService.countByCondition(keyword, completed, categoryId, assigneeId);
 		int totalPages = (int) Math.ceil((double) totalCount / PAGE_SIZE);
 		int currentPage = totalPages == 0 ? 1 : Math.min(Math.max(page, 1), totalPages);
 
@@ -41,13 +42,15 @@ public class TodoController {
 		long startItem = totalCount == 0 ? 0 : offset + 1L;
 		long endItem = Math.min(offset + PAGE_SIZE, totalCount);
 
-		model.addAttribute("todos", todoService.findPage(keyword, completed, categoryId, PAGE_SIZE, offset));
+		model.addAttribute("todos", todoService.findPage(keyword, completed, categoryId, assigneeId, PAGE_SIZE, offset));
 		model.addAttribute("keyword", keyword);
 		model.addAttribute("status", selectedStatus);
 		model.addAttribute("categories", todoService.findAllCategories());
 		model.addAttribute("categoryId", categoryId);
+		model.addAttribute("assignees", todoService.findAllAssignees());
+		model.addAttribute("assigneeId", assigneeId);
 		model.addAttribute("hasSearchCondition",
-				!keyword.isEmpty() || !STATUS_ALL.equals(selectedStatus) || categoryId != null);
+				!keyword.isEmpty() || !STATUS_ALL.equals(selectedStatus) || categoryId != null || assigneeId != null);
 		model.addAttribute("currentPage", currentPage);
 		model.addAttribute("totalPages", totalPages);
 		model.addAttribute("totalCount", totalCount);
@@ -76,6 +79,7 @@ public class TodoController {
 	@GetMapping("/new")
 	public String newTodo(Model model) {
 		model.addAttribute("categories", todoService.findAllCategories());
+		model.addAttribute("assignees", todoService.findAllAssignees());
 		return "todo/form";
 	}
 
@@ -87,6 +91,7 @@ public class TodoController {
 		}
 		model.addAttribute("todo", todo);
 		model.addAttribute("categories", todoService.findAllCategories());
+		model.addAttribute("assignees", todoService.findAllAssignees());
 		return "todo/edit";
 	}
 
@@ -101,12 +106,15 @@ public class TodoController {
 			@RequestParam String description,
 			@RequestParam(required = false) Boolean done,
 			@RequestParam(required = false) Long categoryId,
+			@RequestParam(required = false) Long assigneeId,
 			Model model) {
 		model.addAttribute("title", title);
 		model.addAttribute("description", description);
 		model.addAttribute("done", Boolean.TRUE.equals(done));
 		model.addAttribute("categoryId", categoryId);
 		model.addAttribute("category", todoService.findCategoryById(categoryId));
+		model.addAttribute("assigneeId", assigneeId);
+		model.addAttribute("assignee", todoService.findAssigneeById(assigneeId));
 		return "todo/confirm";
 	}
 
@@ -117,11 +125,13 @@ public class TodoController {
 
 	@PostMapping("/complete")
 	public String complete(@RequestParam String title, @RequestParam(required = false) Long categoryId,
+			@RequestParam(required = false) Long assigneeId,
 			RedirectAttributes redirectAttributes) {
 		Todo todo = new Todo();
 		todo.setTitle(title);
 		todo.setCompleted(false);
 		todo.setCategoryId(categoryId);
+		todo.setAssigneeId(assigneeId);
 		try {
 			todoService.create(todo);
 		} catch (IllegalArgumentException exception) {
@@ -134,6 +144,7 @@ public class TodoController {
 	@PostMapping("/{id}/update")
 	public String update(@PathVariable Long id, @RequestParam String title,
 			@RequestParam(required = false) Long categoryId,
+			@RequestParam(required = false) Long assigneeId,
 			RedirectAttributes redirectAttributes) {
 		Todo todo = todoService.findById(id);
 		if (todo != null) {
@@ -141,8 +152,13 @@ public class TodoController {
 				redirectAttributes.addFlashAttribute("errorMessage", "指定されたカテゴリは存在しません。");
 				return "redirect:/todo/" + id + "/edit";
 			}
+			if (assigneeId != null && todoService.findAssigneeById(assigneeId) == null) {
+				redirectAttributes.addFlashAttribute("errorMessage", "指定された担当者は存在しません。");
+				return "redirect:/todo/" + id + "/edit";
+			}
 			todo.setTitle(title);
 			todo.setCategoryId(categoryId);
+			todo.setAssigneeId(assigneeId);
 			if (todoService.update(todo) > 0) {
 				redirectAttributes.addFlashAttribute("successMessage", "更新が完了しました");
 				return "redirect:/todo";

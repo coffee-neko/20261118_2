@@ -34,6 +34,15 @@
                         </div>
 
                         <div class="mb-3">
+                            <label for="assigneeId" class="form-label">担当者</label>
+                            <select id="assigneeId" name="assigneeId" class="form-select">
+                                <option value="">未設定</option>
+                                <option th:each="assignee : ${assignees}" th:value="${assignee.id}"
+                                        th:text="${assignee.name}">たろう</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
                             <label for="description" class="form-label">説明</label>
                             <textarea id="description" name="description" class="form-control" rows="3"></textarea>
                         </div>

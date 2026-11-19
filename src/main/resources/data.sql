@@ -12,3 +12,7 @@ INSERT INTO categories (name, color) VALUES ('申告内容確認', '#FD7E14');
 INSERT INTO categories (name, color) VALUES ('年税額計算', '#198754');
 INSERT INTO categories (name, color) VALUES ('書類提出・保管', '#795548');
 INSERT INTO categories (name, color) VALUES ('その他', '#6C757D');
+INSERT INTO assignees (name) VALUES ('たろう');
+INSERT INTO assignees (name) VALUES ('はなこ');
+INSERT INTO assignees (name) VALUES ('じろう');
+INSERT INTO assignees (name) VALUES ('さくら');
