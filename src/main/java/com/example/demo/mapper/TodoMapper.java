@@ -16,9 +16,15 @@ public interface TodoMapper {
 
 	Todo findById(Long id);
 
+	Integer findMaxDisplayOrder();
+
+	List<Todo> findPageForUpdate(@Param("limit") int limit, @Param("offset") int offset);
+
 	int insert(Todo todo);
 
 	int update(Todo todo);
+
+	int updateDisplayOrder(@Param("id") Long id, @Param("displayOrder") int displayOrder);
 
 	int deleteById(Long id);
 }

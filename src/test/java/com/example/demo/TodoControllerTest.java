@@ -47,6 +47,7 @@ class TodoControllerTest {
 		Todo todo = new Todo();
 		todo.setTitle("Edit target");
 		todo.setCompleted(false);
+		todo.setDisplayOrder(100);
 		todoMapper.insert(todo);
 
 		try {
@@ -105,6 +106,7 @@ class TodoControllerTest {
 		Todo todo = new Todo();
 		todo.setTitle("Before update");
 		todo.setCompleted(false);
+		todo.setDisplayOrder(100);
 		todoMapper.insert(todo);
 
 		try {

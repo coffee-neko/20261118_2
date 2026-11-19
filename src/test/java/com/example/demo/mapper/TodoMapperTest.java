@@ -20,6 +20,7 @@ class TodoMapperTest {
 		Todo todo = new Todo();
 		todo.setTitle("MyBatis task");
 		todo.setCompleted(false);
+		todo.setDisplayOrder(100);
 
 		assertEquals(1, todoMapper.insert(todo));
 		assertNotNull(todo.getId());

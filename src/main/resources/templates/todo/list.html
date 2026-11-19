@@ -8,6 +8,13 @@
           rel="stylesheet"
           integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
           crossorigin="anonymous">
+    <style>
+        .todo-row[draggable="true"] { cursor: grab; }
+        .todo-row.is-dragging { opacity: 0.45; }
+        .todo-row.is-drop-before { box-shadow: inset 0 3px 0 var(--bs-primary); }
+        .todo-row.is-drop-after { box-shadow: inset 0 -3px 0 var(--bs-primary); }
+        #todo-list.is-saving { pointer-events: none; opacity: 0.7; }
+    </style>
 </head>
 <body class="bg-light">
 <main class="container py-5">
@@ -51,6 +58,14 @@
         全0件中 0～0件
     </p>
 
+    <p th:if="${!hasSearchCondition and not #lists.isEmpty(todos)}" class="text-muted small">
+        行をドラッグ＆ドロップして、このページ内の表示順を変更できます。
+    </p>
+    <p th:if="${hasSearchCondition}" class="text-muted small">
+        検索または絞り込み中は、並び替えできません。
+    </p>
+    <div id="reorder-message" class="small mb-2" role="status" aria-live="polite"></div>
+
     <div class="card shadow-sm" th:if="${not #lists.isEmpty(todos)}">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
@@ -62,8 +77,9 @@
                     <th scope="col">操作</th>
                 </tr>
                 </thead>
-                <tbody>
-                <tr th:each="todo : ${todos}">
+                <tbody id="todo-list" th:attr="data-page=${currentPage},data-reorder-enabled=${!hasSearchCondition}">
+                <tr th:each="todo : ${todos}" class="todo-row" th:attr="data-todo-id=${todo.id}"
+                    th:draggable="${!hasSearchCondition}">
                     <td th:text="${todo.id}">1</td>
                     <td th:class="${todo.completed} ? 'text-decoration-line-through text-muted' : ''"
                         th:text="${todo.title}">ToDo の内容</td>
@@ -136,6 +152,96 @@
             bootstrap.Alert.getOrCreateInstance(alertElement).close();
         }, 3000);
     });
+
+    const todoList = document.querySelector('#todo-list[data-reorder-enabled="true"]');
+    const reorderMessage = document.getElementById('reorder-message');
+
+    if (todoList) {
+        let draggingRow;
+        let originalOrder = [];
+        let isSaving = false;
+
+        const rows = () => Array.from(todoList.querySelectorAll('.todo-row'));
+        const clearDropIndicators = () => rows().forEach((row) => {
+            row.classList.remove('is-drop-before', 'is-drop-after');
+        });
+
+        rows().forEach((row) => {
+            row.addEventListener('dragstart', (event) => {
+                if (isSaving) {
+                    event.preventDefault();
+                    return;
+                }
+                draggingRow = row;
+                originalOrder = rows().map((item) => item.dataset.todoId);
+                row.classList.add('is-dragging');
+                event.dataTransfer.effectAllowed = 'move';
+                event.dataTransfer.setData('text/plain', row.dataset.todoId);
+            });
+
+            row.addEventListener('dragover', (event) => {
+                if (!draggingRow || draggingRow === row) {
+                    return;
+                }
+                event.preventDefault();
+                clearDropIndicators();
+                const insertAfter = event.clientY > row.getBoundingClientRect().top + row.offsetHeight / 2;
+                row.classList.add(insertAfter ? 'is-drop-after' : 'is-drop-before');
+                event.dataTransfer.dropEffect = 'move';
+            });
+
+            row.addEventListener('drop', async (event) => {
+                event.preventDefault();
+                if (!draggingRow || draggingRow === row || isSaving) {
+                    return;
+                }
+
+                const insertAfter = event.clientY > row.getBoundingClientRect().top + row.offsetHeight / 2;
+                todoList.insertBefore(draggingRow, insertAfter ? row.nextSibling : row);
+                clearDropIndicators();
+                await saveOrder();
+            });
+
+            row.addEventListener('dragend', () => {
+                if (draggingRow) {
+                    draggingRow.classList.remove('is-dragging');
+                }
+                clearDropIndicators();
+                draggingRow = undefined;
+            });
+        });
+
+        async function saveOrder() {
+            isSaving = true;
+            todoList.classList.add('is-saving');
+            reorderMessage.textContent = '並び順を保存しています…';
+            reorderMessage.className = 'small mb-2 text-muted';
+
+            try {
+                const response = await fetch('/api/todo/reorder', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        page: Number(todoList.dataset.page),
+                        todoIds: rows().map((row) => Number(row.dataset.todoId))
+                    })
+                });
+                if (!response.ok) {
+                    throw new Error('保存に失敗しました。');
+                }
+                reorderMessage.textContent = '並び順を保存しました。';
+                reorderMessage.className = 'small mb-2 text-success';
+            } catch (error) {
+                const rowsById = new Map(rows().map((row) => [row.dataset.todoId, row]));
+                originalOrder.forEach((id) => todoList.appendChild(rowsById.get(id)));
+                reorderMessage.textContent = '保存に失敗したため、元の並び順に戻しました。';
+                reorderMessage.className = 'small mb-2 text-danger';
+            } finally {
+                isSaving = false;
+                todoList.classList.remove('is-saving');
+            }
+        }
+    }
 </script>
 </body>
 </html>
