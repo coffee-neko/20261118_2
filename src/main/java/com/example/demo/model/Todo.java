@@ -9,4 +9,7 @@ public class Todo {
 	private String title;
 	private Boolean completed;
 	private Integer displayOrder;
+	private Long categoryId;
+	private String categoryName;
+	private String categoryColor;
 }

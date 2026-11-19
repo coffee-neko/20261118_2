@@ -35,7 +35,7 @@ class TodoReorderControllerTest {
 
 	@Test
 	void reorderSavesTheOrderWithinTheCurrentPage() throws Exception {
-		List<Todo> todos = todoMapper.findPage("", null, 10, 0);
+		List<Todo> todos = todoMapper.findPage("", null, null, 10, 0);
 		List<Long> reorderedIds = new ArrayList<>(todos.stream().map(Todo::getId).toList());
 		Collections.reverse(reorderedIds);
 
@@ -44,13 +44,13 @@ class TodoReorderControllerTest {
 				.content(requestBody(1, reorderedIds)))
 				.andExpect(status().isNoContent());
 
-		List<Long> savedIds = todoMapper.findPage("", null, 10, 0).stream().map(Todo::getId).toList();
+		List<Long> savedIds = todoMapper.findPage("", null, null, 10, 0).stream().map(Todo::getId).toList();
 		assertEquals(reorderedIds, savedIds);
 	}
 
 	@Test
 	void reorderRejectsDuplicateIds() throws Exception {
-		List<Todo> todos = todoMapper.findPage("", null, 10, 0);
+		List<Todo> todos = todoMapper.findPage("", null, null, 10, 0);
 		List<Long> duplicatedIds = todos.stream().map(Todo::getId).collect(Collectors.toList());
 		duplicatedIds.set(1, duplicatedIds.get(0));
 

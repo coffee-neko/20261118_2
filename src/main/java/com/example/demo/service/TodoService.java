@@ -4,7 +4,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.example.demo.mapper.CategoryMapper;
 import com.example.demo.mapper.TodoMapper;
+import com.example.demo.model.Category;
 import com.example.demo.model.Todo;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,13 +15,16 @@ import org.springframework.transaction.annotation.Transactional;
 public class TodoService {
 
 	private final TodoMapper todoMapper;
+	private final CategoryMapper categoryMapper;
 
-	public TodoService(TodoMapper todoMapper) {
+	public TodoService(TodoMapper todoMapper, CategoryMapper categoryMapper) {
 		this.todoMapper = todoMapper;
+		this.categoryMapper = categoryMapper;
 	}
 
 	@Transactional
 	public void create(Todo todo) {
+		validateCategory(todo.getCategoryId());
 		Integer maxDisplayOrder = todoMapper.findMaxDisplayOrder();
 		todo.setDisplayOrder(maxDisplayOrder == null ? 1 : maxDisplayOrder + 1);
 		todoMapper.insert(todo);
@@ -29,12 +34,20 @@ public class TodoService {
 		return todoMapper.findAll();
 	}
 
-	public List<Todo> findPage(String keyword, Boolean completed, int limit, int offset) {
-		return todoMapper.findPage(keyword, completed, limit, offset);
+	public List<Todo> findPage(String keyword, Boolean completed, Long categoryId, int limit, int offset) {
+		return todoMapper.findPage(keyword, completed, categoryId, limit, offset);
 	}
 
-	public long countByCondition(String keyword, Boolean completed) {
-		return todoMapper.countByCondition(keyword, completed);
+	public long countByCondition(String keyword, Boolean completed, Long categoryId) {
+		return todoMapper.countByCondition(keyword, completed, categoryId);
+	}
+
+	public List<Category> findAllCategories() {
+		return categoryMapper.findAll();
+	}
+
+	public Category findCategoryById(Long categoryId) {
+		return categoryId == null ? null : categoryMapper.findById(categoryId);
 	}
 
 	public Todo findById(Long id) {
@@ -42,6 +55,7 @@ public class TodoService {
 	}
 
 	public int update(Todo todo) {
+		validateCategory(todo.getCategoryId());
 		return todoMapper.update(todo);
 	}
 
@@ -57,6 +71,12 @@ public class TodoService {
 
 	public int deleteById(Long id) {
 		return todoMapper.deleteById(id);
+	}
+
+	private void validateCategory(Long categoryId) {
+		if (categoryId != null && categoryMapper.findById(categoryId) == null) {
+			throw new IllegalArgumentException("指定されたカテゴリは存在しません。");
+		}
 	}
 
 	@Transactional
