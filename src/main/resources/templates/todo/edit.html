@@ -59,6 +59,14 @@
                                    max="9999-12-31" th:value="${dueDate != null ? dueDate : todo.dueDate}">
                         </div>
 
+                        <div class="mb-4">
+                            <label for="status" class="form-label">状態</label>
+                            <select id="status" name="status" class="form-select">
+                                <option th:each="option : ${statusOptions}" th:value="${option.name()}"
+                                        th:selected="${option == todo.status}" th:text="${option.label}">未着手</option>
+                            </select>
+                        </div>
+
                         <div class="d-flex gap-2">
                             <a class="btn btn-outline-secondary" th:href="@{/todo}">戻る</a>
                             <button type="submit" class="btn btn-primary">更新</button>

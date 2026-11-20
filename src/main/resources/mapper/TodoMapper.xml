@@ -7,7 +7,7 @@
     <resultMap id="todoResultMap" type="com.example.demo.model.Todo">
         <id property="id" column="id"/>
         <result property="title" column="title"/>
-        <result property="completed" column="completed"/>
+        <result property="status" column="status"/>
         <result property="startDate" column="start_date"/>
         <result property="dueDate" column="due_date"/>
         <result property="displayOrder" column="display_order"/>
@@ -18,8 +18,25 @@
         <result property="assigneeName" column="assignee_name"/>
     </resultMap>
 
+    <sql id="searchConditions">
+        <where>
+            <if test="keyword != null and keyword != ''">
+                t.title LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+            <if test="status != null">
+                AND t.status = #{status}
+            </if>
+            <if test="categoryId != null">
+                AND t.category_id = #{categoryId}
+            </if>
+            <if test="assigneeId != null">
+                AND t.assignee_id = #{assigneeId}
+            </if>
+        </where>
+    </sql>
+
     <select id="findAll" resultMap="todoResultMap">
-        SELECT t.id, t.title, t.completed, t.display_order, t.category_id, t.assignee_id,
+        SELECT t.id, t.title, t.status, t.display_order, t.category_id, t.assignee_id,
                t.start_date, t.due_date,
                c.name AS category_name, c.color AS category_color, a.name AS assignee_name
         FROM todos t
@@ -29,26 +46,13 @@
     </select>
 
     <select id="findPage" resultMap="todoResultMap">
-        SELECT t.id, t.title, t.completed, t.display_order, t.category_id, t.assignee_id,
+        SELECT t.id, t.title, t.status, t.display_order, t.category_id, t.assignee_id,
                t.start_date, t.due_date,
                c.name AS category_name, c.color AS category_color, a.name AS assignee_name
         FROM todos t
         LEFT JOIN categories c ON c.id = t.category_id
         LEFT JOIN assignees a ON a.id = t.assignee_id
-        <where>
-            <if test="keyword != null and keyword != ''">
-                t.title LIKE CONCAT('%', #{keyword}, '%')
-            </if>
-            <if test="completed != null">
-                AND t.completed = #{completed}
-            </if>
-            <if test="categoryId != null">
-                AND t.category_id = #{categoryId}
-            </if>
-            <if test="assigneeId != null">
-                AND t.assignee_id = #{assigneeId}
-            </if>
-        </where>
+        <include refid="searchConditions"/>
         ORDER BY t.display_order, t.id
         LIMIT #{limit} OFFSET #{offset}
     </select>
@@ -56,20 +60,7 @@
     <select id="countByCondition" resultType="long">
         SELECT COUNT(*)
         FROM todos t
-        <where>
-            <if test="keyword != null and keyword != ''">
-                t.title LIKE CONCAT('%', #{keyword}, '%')
-            </if>
-            <if test="completed != null">
-                AND t.completed = #{completed}
-            </if>
-            <if test="categoryId != null">
-                AND t.category_id = #{categoryId}
-            </if>
-            <if test="assigneeId != null">
-                AND t.assignee_id = #{assigneeId}
-            </if>
-        </where>
+        <include refid="searchConditions"/>
     </select>
 
     <select id="countAll" resultType="long">
@@ -80,11 +71,11 @@
     <select id="countCompleted" resultType="long">
         SELECT COUNT(*)
         FROM todos
-        WHERE completed = TRUE
+        WHERE status = 'COMPLETED'
     </select>
 
     <select id="findById" parameterType="java.lang.Long" resultMap="todoResultMap">
-        SELECT t.id, t.title, t.completed, t.display_order, t.category_id, t.assignee_id,
+        SELECT t.id, t.title, t.status, t.display_order, t.category_id, t.assignee_id,
                t.start_date, t.due_date,
                c.name AS category_name, c.color AS category_color, a.name AS assignee_name
         FROM todos t
@@ -99,7 +90,7 @@
     </select>
 
     <select id="findPageForUpdate" resultMap="todoResultMap">
-        SELECT id, title, completed, display_order
+        SELECT id, display_order
         FROM todos
         ORDER BY display_order, id
         LIMIT #{limit} OFFSET #{offset}
@@ -108,15 +99,15 @@
 
     <insert id="insert" parameterType="com.example.demo.model.Todo"
             useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO todos (title, completed, display_order, category_id, assignee_id, start_date, due_date)
-        VALUES (#{title}, #{completed}, #{displayOrder}, #{categoryId}, #{assigneeId},
+        INSERT INTO todos (title, status, display_order, category_id, assignee_id, start_date, due_date)
+        VALUES (#{title}, #{status}, #{displayOrder}, #{categoryId}, #{assigneeId},
                 #{startDate,jdbcType=DATE}, #{dueDate,jdbcType=DATE})
     </insert>
 
     <update id="update" parameterType="com.example.demo.model.Todo">
         UPDATE todos
         SET title = #{title},
-            completed = #{completed},
+            status = #{status},
             category_id = #{categoryId},
             assignee_id = #{assigneeId},
             start_date = #{startDate,jdbcType=DATE},
@@ -124,9 +115,9 @@
         WHERE id = #{id}
     </update>
 
-    <update id="toggleCompleted">
+    <update id="updateStatus">
         UPDATE todos
-        SET completed = NOT completed
+        SET status = #{status}
         WHERE id = #{id}
     </update>
 

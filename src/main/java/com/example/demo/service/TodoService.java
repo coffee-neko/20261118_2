@@ -10,6 +10,7 @@ import com.example.demo.mapper.TodoMapper;
 import com.example.demo.model.Assignee;
 import com.example.demo.model.Category;
 import com.example.demo.model.Todo;
+import com.example.demo.model.TodoStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,12 +41,12 @@ public class TodoService {
 		return todoMapper.findAll();
 	}
 
-	public List<Todo> findPage(String keyword, Boolean completed, Long categoryId, Long assigneeId, int limit, int offset) {
-		return todoMapper.findPage(keyword, completed, categoryId, assigneeId, limit, offset);
+	public List<Todo> findPage(String keyword, TodoStatus status, Long categoryId, Long assigneeId, int limit, int offset) {
+		return todoMapper.findPage(keyword, status, categoryId, assigneeId, limit, offset);
 	}
 
-	public long countByCondition(String keyword, Boolean completed, Long categoryId, Long assigneeId) {
-		return todoMapper.countByCondition(keyword, completed, categoryId, assigneeId);
+	public long countByCondition(String keyword, TodoStatus status, Long categoryId, Long assigneeId) {
+		return todoMapper.countByCondition(keyword, status, categoryId, assigneeId);
 	}
 
 	public long countAll() {
@@ -83,8 +84,8 @@ public class TodoService {
 		return todoMapper.update(todo);
 	}
 
-	public boolean toggleCompleted(Long id) {
-		return todoMapper.toggleCompleted(id) > 0;
+	public boolean updateStatus(Long id, TodoStatus status) {
+		return todoMapper.updateStatus(id, status) > 0;
 	}
 
 	public void validateDates(Todo todo) {

@@ -5,6 +5,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 
 import com.example.demo.model.Todo;
+import com.example.demo.model.TodoStatus;
 import com.example.demo.service.TodoService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -22,8 +23,6 @@ public class TodoController {
 	private static final int PAGE_SIZE = 10;
 	private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Tokyo");
 	private static final String STATUS_ALL = "all";
-	private static final String STATUS_INCOMPLETE = "incomplete";
-	private static final String STATUS_COMPLETED = "completed";
 
 	private final TodoService todoService;
 
@@ -37,9 +36,8 @@ public class TodoController {
 			@RequestParam(defaultValue = STATUS_ALL) String status,
 			@RequestParam(required = false) Long categoryId,
 			@RequestParam(required = false) Long assigneeId, Model model) {
-		String selectedStatus = normalizeStatus(status);
-		Boolean completed = toCompleted(selectedStatus);
-		long totalCount = todoService.countByCondition(keyword, completed, categoryId, assigneeId);
+		TodoStatus selectedStatus = findStatus(status);
+		long totalCount = todoService.countByCondition(keyword, selectedStatus, categoryId, assigneeId);
 		long allTodoCount = todoService.countAll();
 		long completedTodoCount = todoService.countCompleted();
 		int completionRate = allTodoCount == 0 ? 0
@@ -51,16 +49,17 @@ public class TodoController {
 		long startItem = totalCount == 0 ? 0 : offset + 1L;
 		long endItem = Math.min(offset + PAGE_SIZE, totalCount);
 
-		model.addAttribute("todos", todoService.findPage(keyword, completed, categoryId, assigneeId, PAGE_SIZE, offset));
+		model.addAttribute("todos", todoService.findPage(keyword, selectedStatus, categoryId, assigneeId, PAGE_SIZE, offset));
 		model.addAttribute("today", LocalDate.now(BUSINESS_ZONE));
 		model.addAttribute("keyword", keyword);
-		model.addAttribute("status", selectedStatus);
+		model.addAttribute("status", selectedStatus == null ? STATUS_ALL : selectedStatus.name());
+		model.addAttribute("statusOptions", TodoStatus.values());
 		model.addAttribute("categories", todoService.findAllCategories());
 		model.addAttribute("categoryId", categoryId);
 		model.addAttribute("assignees", todoService.findAllAssignees());
 		model.addAttribute("assigneeId", assigneeId);
 		model.addAttribute("hasSearchCondition",
-				!keyword.isEmpty() || !STATUS_ALL.equals(selectedStatus) || categoryId != null || assigneeId != null);
+				!keyword.isEmpty() || selectedStatus != null || categoryId != null || assigneeId != null);
 		model.addAttribute("currentPage", currentPage);
 		model.addAttribute("totalPages", totalPages);
 		model.addAttribute("totalCount", totalCount);
@@ -72,23 +71,6 @@ public class TodoController {
 		return "todo/list";
 	}
 
-	private String normalizeStatus(String status) {
-		if (STATUS_INCOMPLETE.equals(status) || STATUS_COMPLETED.equals(status)) {
-			return status;
-		}
-		return STATUS_ALL;
-	}
-
-	private Boolean toCompleted(String status) {
-		if (STATUS_INCOMPLETE.equals(status)) {
-			return false;
-		}
-		if (STATUS_COMPLETED.equals(status)) {
-			return true;
-		}
-		return null;
-	}
-
 	@GetMapping("/new")
 	public String newTodo(Model model) {
 		addFormOptions(model);
@@ -96,6 +78,7 @@ public class TodoController {
 	}
 
 	private void addFormOptions(Model model) {
+		model.addAttribute("statusOptions", TodoStatus.values());
 		model.addAttribute("categories", todoService.findAllCategories());
 		model.addAttribute("assignees", todoService.findAllAssignees());
 	}
@@ -120,18 +103,20 @@ public class TodoController {
 	public String confirm(
 			@RequestParam String title,
 			@RequestParam String description,
-			@RequestParam(required = false) Boolean done,
+			@RequestParam(defaultValue = "NOT_STARTED") String status,
 			@RequestParam(required = false) Long categoryId,
 			@RequestParam(required = false) Long assigneeId,
 			@RequestParam(required = false) String startDate,
 			@RequestParam(required = false) String dueDate,
 			Model model) {
-		addRegistrationInput(model, title, description, done, categoryId, assigneeId, startDate, dueDate);
+		addRegistrationInput(model, title, description, status, categoryId, assigneeId, startDate, dueDate);
 		try {
+			TodoStatus confirmedStatus = requireStatus(status);
 			Todo todo = new Todo();
 			todo.setStartDate(parseDate(startDate, "開始日"));
 			todo.setDueDate(parseDate(dueDate, "期限"));
 			todoService.validateDates(todo);
+			model.addAttribute("confirmedStatus", confirmedStatus);
 		} catch (IllegalArgumentException exception) {
 			model.addAttribute("errorMessage", exception.getMessage());
 			return newTodo(model);
@@ -149,20 +134,20 @@ public class TodoController {
 	@PostMapping("/complete")
 	public String complete(@RequestParam String title, @RequestParam(required = false) Long categoryId,
 			@RequestParam(required = false) Long assigneeId,
-			@RequestParam(required = false) String description, @RequestParam(required = false) Boolean done,
+			@RequestParam(required = false) String description, @RequestParam(defaultValue = "NOT_STARTED") String status,
 			@RequestParam(required = false) String startDate, @RequestParam(required = false) String dueDate,
 			Model model) {
 		Todo todo = new Todo();
 		todo.setTitle(title);
-		todo.setCompleted(false);
 		todo.setCategoryId(categoryId);
 		todo.setAssigneeId(assigneeId);
 		try {
+			todo.setStatus(requireStatus(status));
 			todo.setStartDate(parseDate(startDate, "開始日"));
 			todo.setDueDate(parseDate(dueDate, "期限"));
 			todoService.create(todo);
 		} catch (IllegalArgumentException exception) {
-			addRegistrationInput(model, title, description, done, categoryId, assigneeId, startDate, dueDate);
+			addRegistrationInput(model, title, description, status, categoryId, assigneeId, startDate, dueDate);
 			model.addAttribute("errorMessage", exception.getMessage());
 			return newTodo(model);
 		}
@@ -173,6 +158,7 @@ public class TodoController {
 	public String update(@PathVariable Long id, @RequestParam String title,
 			@RequestParam(required = false) Long categoryId,
 			@RequestParam(required = false) Long assigneeId,
+			@RequestParam(required = false) String status,
 			@RequestParam(required = false) String startDate, @RequestParam(required = false) String dueDate,
 			Model model, RedirectAttributes redirectAttributes) {
 		Todo todo = todoService.findById(id);
@@ -181,6 +167,9 @@ public class TodoController {
 			todo.setCategoryId(categoryId);
 			todo.setAssigneeId(assigneeId);
 			try {
+				if (status != null) {
+					todo.setStatus(requireStatus(status));
+				}
 				if (startDate != null) {
 					todo.setStartDate(parseDate(startDate, "開始日"));
 				}
@@ -205,15 +194,32 @@ public class TodoController {
 		return "redirect:/todo";
 	}
 
-	private void addRegistrationInput(Model model, String title, String description, Boolean done,
+	private void addRegistrationInput(Model model, String title, String description, String status,
 			Long categoryId, Long assigneeId, String startDate, String dueDate) {
 		model.addAttribute("title", title);
 		model.addAttribute("description", description);
-		model.addAttribute("done", Boolean.TRUE.equals(done));
+		model.addAttribute("status", status);
 		model.addAttribute("categoryId", categoryId);
 		model.addAttribute("assigneeId", assigneeId);
 		model.addAttribute("startDate", startDate);
 		model.addAttribute("dueDate", dueDate);
+	}
+
+	private TodoStatus findStatus(String value) {
+		for (TodoStatus status : TodoStatus.values()) {
+			if (status.name().equals(value)) {
+				return status;
+			}
+		}
+		return null;
+	}
+
+	private TodoStatus requireStatus(String value) {
+		TodoStatus status = findStatus(value);
+		if (status == null) {
+			throw new IllegalArgumentException("状態を未着手・進行中・完了から選択してください。");
+		}
+		return status;
 	}
 
 	private LocalDate parseDate(String value, String label) {
@@ -234,9 +240,16 @@ public class TodoController {
 		return date;
 	}
 
-	@PostMapping("/{id}/toggle")
-	public String toggleCompleted(@PathVariable Long id) {
-		todoService.toggleCompleted(id);
+	@PostMapping("/{id}/status")
+	public String updateStatus(@PathVariable Long id, @RequestParam String status,
+			RedirectAttributes redirectAttributes) {
+		try {
+			if (!todoService.updateStatus(id, requireStatus(status))) {
+				redirectAttributes.addFlashAttribute("errorMessage", "状態の更新に失敗しました");
+			}
+		} catch (IllegalArgumentException exception) {
+			redirectAttributes.addFlashAttribute("errorMessage", exception.getMessage());
+		}
 		return "redirect:/todo";
 	}
 

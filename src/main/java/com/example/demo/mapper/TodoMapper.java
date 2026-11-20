@@ -3,17 +3,18 @@ package com.example.demo.mapper;
 import java.util.List;
 
 import com.example.demo.model.Todo;
+import com.example.demo.model.TodoStatus;
 import org.apache.ibatis.annotations.Param;
 
 public interface TodoMapper {
 
 	List<Todo> findAll();
 
-	List<Todo> findPage(@Param("keyword") String keyword, @Param("completed") Boolean completed,
+	List<Todo> findPage(@Param("keyword") String keyword, @Param("status") TodoStatus status,
 			@Param("categoryId") Long categoryId, @Param("assigneeId") Long assigneeId,
 			@Param("limit") int limit, @Param("offset") int offset);
 
-	long countByCondition(@Param("keyword") String keyword, @Param("completed") Boolean completed,
+	long countByCondition(@Param("keyword") String keyword, @Param("status") TodoStatus status,
 			@Param("categoryId") Long categoryId, @Param("assigneeId") Long assigneeId);
 
 	long countAll();
@@ -30,7 +31,7 @@ public interface TodoMapper {
 
 	int update(Todo todo);
 
-	int toggleCompleted(@Param("id") Long id);
+	int updateStatus(@Param("id") Long id, @Param("status") TodoStatus status);
 
 	int updateDisplayOrder(@Param("id") Long id, @Param("displayOrder") int displayOrder);
 

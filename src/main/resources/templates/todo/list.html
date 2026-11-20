@@ -49,8 +49,8 @@
                 <label for="status" class="form-label">状態で絞り込み</label>
                 <select id="status" name="status" class="form-select">
                     <option value="all" th:selected="${status == 'all'}">すべて</option>
-                    <option value="incomplete" th:selected="${status == 'incomplete'}">未完了</option>
-                    <option value="completed" th:selected="${status == 'completed'}">完了</option>
+                    <option th:each="option : ${statusOptions}" th:value="${option.name()}"
+                            th:selected="${option.name() == status}" th:text="${option.label}">未着手</option>
                 </select>
             </div>
             <div class="col-md-3">
@@ -122,10 +122,11 @@
                 </tr>
                 </thead>
                 <tbody id="todo-list" th:attr="data-page=${currentPage},data-reorder-enabled=${!hasSearchCondition}">
-                <tr th:each="todo : ${todos}" class="todo-row" th:attr="data-todo-id=${todo.id}"
+                <tr th:each="todo : ${todos}" th:with="completed=${todo.status.completed}"
+                    class="todo-row" th:attr="data-todo-id=${todo.id}"
                     th:draggable="${!hasSearchCondition}">
                     <td th:text="${todo.id}">1</td>
-                    <td th:class="${todo.completed} ? 'text-decoration-line-through text-muted' : ''"
+                    <td th:class="${completed} ? 'text-decoration-line-through text-muted' : ''"
                         th:text="${todo.title}">ToDo の内容</td>
                     <td>
                         <span th:if="${todo.categoryName != null}" class="badge"
@@ -138,17 +139,22 @@
                     <td class="text-nowrap">
                         <span th:text="${todo.dueDate != null ? todo.dueDate : '未設定'}">未設定</span>
                         <span class="badge text-bg-danger"
-                              th:if="${!todo.completed and todo.dueDate != null and todo.dueDate.isBefore(today)}">期限超過</span>
+                              th:if="${!completed and todo.dueDate != null and todo.dueDate.isBefore(today)}">期限超過</span>
                     </td>
                     <td>
                         <span class="badge"
-                              th:classappend="${todo.completed} ? ' text-bg-success' : ' text-bg-secondary'"
-                              th:text="${todo.completed} ? '完了' : '未完了'">未完了</span>
+                              th:classappend="${completed ? 'text-bg-success' : (todo.status.name() == 'IN_PROGRESS' ? 'text-bg-primary' : 'text-bg-secondary')}"
+                              th:text="${todo.status.label}">未着手</span>
                     </td>
                     <td>
-                        <form th:action="@{/todo/{id}/toggle(id=${todo.id})}" method="post" class="d-inline">
+                        <form th:action="@{/todo/{id}/status(id=${todo.id})}" method="post" class="d-flex gap-1 mb-2">
                             <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
-                            <button type="submit" class="btn btn-outline-success btn-sm">完了切替</button>
+                            <select name="status" class="form-select form-select-sm"
+                                    th:aria-label="|${todo.title}の状態|">
+                                <option th:each="option : ${statusOptions}" th:value="${option.name()}"
+                                        th:selected="${option == todo.status}" th:text="${option.label}">未着手</option>
+                            </select>
+                            <button type="submit" class="btn btn-outline-success btn-sm text-nowrap">状態更新</button>
                         </form>
                         <a class="btn btn-outline-primary btn-sm me-2"
                            th:href="@{/todo/{id}/edit(id=${todo.id})}">編集</a>
