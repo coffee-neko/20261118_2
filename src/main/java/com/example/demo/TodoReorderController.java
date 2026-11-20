@@ -30,13 +30,13 @@ public class TodoReorderController {
 		}
 
 		try {
-			todoService.reorderPage(request.page(), PAGE_SIZE, request.todoIds());
+			todoService.reorderPage(request.page(), PAGE_SIZE, request.parentId(), request.todoIds());
 			return ResponseEntity.noContent().build();
 		} catch (IllegalArgumentException exception) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, exception.getMessage(), exception);
 		}
 	}
 
-	public record TodoReorderRequest(Integer page, List<Long> todoIds) {
+	public record TodoReorderRequest(Integer page, Long parentId, List<Long> todoIds) {
 	}
 }

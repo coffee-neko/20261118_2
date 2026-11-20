@@ -11,12 +11,28 @@
         <result property="startDate" column="start_date"/>
         <result property="dueDate" column="due_date"/>
         <result property="displayOrder" column="display_order"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="parentTitle" column="parent_title"/>
+        <result property="childCount" column="child_count"/>
+        <result property="completedChildCount" column="completed_child_count"/>
         <result property="categoryId" column="category_id"/>
         <result property="categoryName" column="category_name"/>
         <result property="categoryColor" column="category_color"/>
         <result property="assigneeId" column="assignee_id"/>
         <result property="assigneeName" column="assignee_name"/>
     </resultMap>
+
+    <resultMap id="progressResultMap" type="com.example.demo.model.TodoProgress">
+        <constructor>
+            <arg column="total_tasks" javaType="_long"/>
+            <arg column="completed_tasks" javaType="_long"/>
+        </constructor>
+    </resultMap>
+
+    <sql id="hierarchyOrder">
+        ORDER BY COALESCE(p.display_order, t.display_order), COALESCE(t.parent_id, t.id),
+                 CASE WHEN t.parent_id IS NULL THEN 0 ELSE 1 END, t.display_order, t.id
+    </sql>
 
     <sql id="searchConditions">
         <where>
@@ -37,23 +53,28 @@
 
     <select id="findAll" resultMap="todoResultMap">
         SELECT t.id, t.title, t.status, t.display_order, t.category_id, t.assignee_id,
-               t.start_date, t.due_date,
+               t.start_date, t.due_date, t.parent_id, p.title AS parent_title,
                c.name AS category_name, c.color AS category_color, a.name AS assignee_name
         FROM todos t
         LEFT JOIN categories c ON c.id = t.category_id
         LEFT JOIN assignees a ON a.id = t.assignee_id
-        ORDER BY t.display_order, t.id
+        LEFT JOIN todos p ON p.id = t.parent_id
+        <include refid="hierarchyOrder"/>
     </select>
 
     <select id="findPage" resultMap="todoResultMap">
         SELECT t.id, t.title, t.status, t.display_order, t.category_id, t.assignee_id,
-               t.start_date, t.due_date,
+               t.start_date, t.due_date, t.parent_id, p.title AS parent_title,
+               (SELECT COUNT(*) FROM todos child WHERE child.parent_id = t.id) AS child_count,
+               (SELECT COUNT(*) FROM todos child WHERE child.parent_id = t.id
+                    AND child.status = 'COMPLETED') AS completed_child_count,
                c.name AS category_name, c.color AS category_color, a.name AS assignee_name
         FROM todos t
         LEFT JOIN categories c ON c.id = t.category_id
         LEFT JOIN assignees a ON a.id = t.assignee_id
+        LEFT JOIN todos p ON p.id = t.parent_id
         <include refid="searchConditions"/>
-        ORDER BY t.display_order, t.id
+        <include refid="hierarchyOrder"/>
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
@@ -63,24 +84,21 @@
         <include refid="searchConditions"/>
     </select>
 
-    <select id="countAll" resultType="long">
-        SELECT COUNT(*)
-        FROM todos
-    </select>
-
-    <select id="countCompleted" resultType="long">
-        SELECT COUNT(*)
-        FROM todos
-        WHERE status = 'COMPLETED'
+    <select id="findQuestProgress" resultMap="progressResultMap">
+        SELECT COUNT(*) AS total_tasks,
+               COUNT(CASE WHEN t.status = 'COMPLETED' THEN 1 END) AS completed_tasks
+        FROM todos t
+        WHERE NOT EXISTS (SELECT 1 FROM todos child WHERE child.parent_id = t.id)
     </select>
 
     <select id="findById" parameterType="java.lang.Long" resultMap="todoResultMap">
         SELECT t.id, t.title, t.status, t.display_order, t.category_id, t.assignee_id,
-               t.start_date, t.due_date,
+               t.start_date, t.due_date, t.parent_id, p.title AS parent_title,
                c.name AS category_name, c.color AS category_color, a.name AS assignee_name
         FROM todos t
         LEFT JOIN categories c ON c.id = t.category_id
         LEFT JOIN assignees a ON a.id = t.assignee_id
+        LEFT JOIN todos p ON p.id = t.parent_id
         WHERE t.id = #{id}
     </select>
 
@@ -89,19 +107,33 @@
         FROM todos
     </select>
 
-    <select id="findPageForUpdate" resultMap="todoResultMap">
-        SELECT id, display_order
+    <select id="lockById" resultType="java.lang.Long">
+        SELECT id
         FROM todos
-        ORDER BY display_order, id
-        LIMIT #{limit} OFFSET #{offset}
+        WHERE id = #{id}
         FOR UPDATE
+    </select>
+
+    <select id="findParentOptions" resultMap="todoResultMap">
+        SELECT id, title
+        FROM todos
+        WHERE parent_id IS NULL
+        <if test="taskId != null">
+            AND id != #{taskId}
+            AND NOT EXISTS (SELECT 1 FROM todos child WHERE child.parent_id = #{taskId})
+        </if>
+        ORDER BY display_order, id
+    </select>
+
+    <select id="hasChildren" resultType="boolean">
+        SELECT EXISTS (SELECT 1 FROM todos WHERE parent_id = #{parentId})
     </select>
 
     <insert id="insert" parameterType="com.example.demo.model.Todo"
             useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO todos (title, status, display_order, category_id, assignee_id, start_date, due_date)
+        INSERT INTO todos (title, status, display_order, category_id, assignee_id, start_date, due_date, parent_id)
         VALUES (#{title}, #{status}, #{displayOrder}, #{categoryId}, #{assigneeId},
-                #{startDate,jdbcType=DATE}, #{dueDate,jdbcType=DATE})
+                #{startDate,jdbcType=DATE}, #{dueDate,jdbcType=DATE}, #{parentId,jdbcType=BIGINT})
     </insert>
 
     <update id="update" parameterType="com.example.demo.model.Todo">
@@ -111,7 +143,8 @@
             category_id = #{categoryId},
             assignee_id = #{assigneeId},
             start_date = #{startDate,jdbcType=DATE},
-            due_date = #{dueDate,jdbcType=DATE}
+            due_date = #{dueDate,jdbcType=DATE},
+            parent_id = #{parentId,jdbcType=BIGINT}
         WHERE id = #{id}
     </update>
 

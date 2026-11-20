@@ -3,8 +3,12 @@ package com.example.demo;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import com.example.demo.model.Todo;
+import com.example.demo.model.TodoProgress;
 import com.example.demo.model.TodoStatus;
 import com.example.demo.service.TodoService;
 import org.springframework.stereotype.Controller;
@@ -38,18 +42,18 @@ public class TodoController {
 			@RequestParam(required = false) Long assigneeId, Model model) {
 		TodoStatus selectedStatus = findStatus(status);
 		long totalCount = todoService.countByCondition(keyword, selectedStatus, categoryId, assigneeId);
-		long allTodoCount = todoService.countAll();
-		long completedTodoCount = todoService.countCompleted();
-		int completionRate = allTodoCount == 0 ? 0
-				: (int) Math.round((double) completedTodoCount * 100 / allTodoCount);
+		TodoProgress progress = todoService.findQuestProgress();
 		int totalPages = (int) Math.ceil((double) totalCount / PAGE_SIZE);
 		int currentPage = totalPages == 0 ? 1 : Math.min(Math.max(page, 1), totalPages);
 
-		int offset = (currentPage - 1) * PAGE_SIZE;
+		long offset = (currentPage - 1L) * PAGE_SIZE;
 		long startItem = totalCount == 0 ? 0 : offset + 1L;
 		long endItem = Math.min(offset + PAGE_SIZE, totalCount);
 
-		model.addAttribute("todos", todoService.findPage(keyword, selectedStatus, categoryId, assigneeId, PAGE_SIZE, offset));
+		List<Todo> todos = todoService.findPage(keyword, selectedStatus, categoryId, assigneeId, PAGE_SIZE, offset);
+		model.addAttribute("todos", todos);
+		model.addAttribute("parentsWithVisibleChildren", todos.stream()
+				.map(Todo::getParentId).filter(Objects::nonNull).collect(Collectors.toSet()));
 		model.addAttribute("today", LocalDate.now(BUSINESS_ZONE));
 		model.addAttribute("keyword", keyword);
 		model.addAttribute("status", selectedStatus == null ? STATUS_ALL : selectedStatus.name());
@@ -63,9 +67,9 @@ public class TodoController {
 		model.addAttribute("currentPage", currentPage);
 		model.addAttribute("totalPages", totalPages);
 		model.addAttribute("totalCount", totalCount);
-		model.addAttribute("allTodoCount", allTodoCount);
-		model.addAttribute("completedTodoCount", completedTodoCount);
-		model.addAttribute("completionRate", completionRate);
+		model.addAttribute("allTodoCount", progress.total());
+		model.addAttribute("completedTodoCount", progress.completed());
+		model.addAttribute("completionRate", progress.percentage());
 		model.addAttribute("startItem", startItem);
 		model.addAttribute("endItem", endItem);
 		return "todo/list";
@@ -73,14 +77,15 @@ public class TodoController {
 
 	@GetMapping("/new")
 	public String newTodo(Model model) {
-		addFormOptions(model);
+		addFormOptions(model, null);
 		return "todo/form";
 	}
 
-	private void addFormOptions(Model model) {
+	private void addFormOptions(Model model, Long taskId) {
 		model.addAttribute("statusOptions", TodoStatus.values());
 		model.addAttribute("categories", todoService.findAllCategories());
 		model.addAttribute("assignees", todoService.findAllAssignees());
+		model.addAttribute("parentOptions", todoService.findParentOptions(taskId));
 	}
 
 	@GetMapping("/{id}/edit")
@@ -90,7 +95,7 @@ public class TodoController {
 			return "redirect:/todo";
 		}
 		model.addAttribute("todo", todo);
-		addFormOptions(model);
+		addFormOptions(model, id);
 		return "todo/edit";
 	}
 
@@ -106,16 +111,18 @@ public class TodoController {
 			@RequestParam(defaultValue = "NOT_STARTED") String status,
 			@RequestParam(required = false) Long categoryId,
 			@RequestParam(required = false) Long assigneeId,
+			@RequestParam(required = false) String parentId,
 			@RequestParam(required = false) String startDate,
 			@RequestParam(required = false) String dueDate,
 			Model model) {
-		addRegistrationInput(model, title, description, status, categoryId, assigneeId, startDate, dueDate);
+		addRegistrationInput(model, title, description, status, categoryId, assigneeId, parentId, startDate, dueDate);
 		try {
 			TodoStatus confirmedStatus = requireStatus(status);
 			Todo todo = new Todo();
 			todo.setStartDate(parseDate(startDate, "開始日"));
 			todo.setDueDate(parseDate(dueDate, "期限"));
 			todoService.validateDates(todo);
+			model.addAttribute("parent", todoService.findEligibleParent(parseParentId(parentId)));
 			model.addAttribute("confirmedStatus", confirmedStatus);
 		} catch (IllegalArgumentException exception) {
 			model.addAttribute("errorMessage", exception.getMessage());
@@ -134,6 +141,7 @@ public class TodoController {
 	@PostMapping("/complete")
 	public String complete(@RequestParam String title, @RequestParam(required = false) Long categoryId,
 			@RequestParam(required = false) Long assigneeId,
+			@RequestParam(required = false) String parentId,
 			@RequestParam(required = false) String description, @RequestParam(defaultValue = "NOT_STARTED") String status,
 			@RequestParam(required = false) String startDate, @RequestParam(required = false) String dueDate,
 			Model model) {
@@ -143,11 +151,12 @@ public class TodoController {
 		todo.setAssigneeId(assigneeId);
 		try {
 			todo.setStatus(requireStatus(status));
+			todo.setParentId(parseParentId(parentId));
 			todo.setStartDate(parseDate(startDate, "開始日"));
 			todo.setDueDate(parseDate(dueDate, "期限"));
 			todoService.create(todo);
 		} catch (IllegalArgumentException exception) {
-			addRegistrationInput(model, title, description, status, categoryId, assigneeId, startDate, dueDate);
+			addRegistrationInput(model, title, description, status, categoryId, assigneeId, parentId, startDate, dueDate);
 			model.addAttribute("errorMessage", exception.getMessage());
 			return newTodo(model);
 		}
@@ -158,6 +167,7 @@ public class TodoController {
 	public String update(@PathVariable Long id, @RequestParam String title,
 			@RequestParam(required = false) Long categoryId,
 			@RequestParam(required = false) Long assigneeId,
+			@RequestParam(required = false) String parentId,
 			@RequestParam(required = false) String status,
 			@RequestParam(required = false) String startDate, @RequestParam(required = false) String dueDate,
 			Model model, RedirectAttributes redirectAttributes) {
@@ -167,6 +177,9 @@ public class TodoController {
 			todo.setCategoryId(categoryId);
 			todo.setAssigneeId(assigneeId);
 			try {
+				if (parentId != null) {
+					todo.setParentId(parseParentId(parentId));
+				}
 				if (status != null) {
 					todo.setStatus(requireStatus(status));
 				}
@@ -185,7 +198,7 @@ public class TodoController {
 				model.addAttribute("startDate", startDate);
 				model.addAttribute("dueDate", dueDate);
 				model.addAttribute("errorMessage", exception.getMessage());
-				addFormOptions(model);
+				addFormOptions(model, id);
 				return "todo/edit";
 			}
 		}
@@ -195,14 +208,26 @@ public class TodoController {
 	}
 
 	private void addRegistrationInput(Model model, String title, String description, String status,
-			Long categoryId, Long assigneeId, String startDate, String dueDate) {
+			Long categoryId, Long assigneeId, String parentId, String startDate, String dueDate) {
 		model.addAttribute("title", title);
 		model.addAttribute("description", description);
 		model.addAttribute("status", status);
 		model.addAttribute("categoryId", categoryId);
 		model.addAttribute("assigneeId", assigneeId);
+		model.addAttribute("parentId", parentId);
 		model.addAttribute("startDate", startDate);
 		model.addAttribute("dueDate", dueDate);
+	}
+
+	private Long parseParentId(String value) {
+		if (value == null || value.isEmpty()) {
+			return null;
+		}
+		try {
+			return Long.valueOf(value);
+		} catch (NumberFormatException exception) {
+			throw new IllegalArgumentException("親タスクの指定が正しくありません。", exception);
+		}
 	}
 
 	private TodoStatus findStatus(String value) {
@@ -255,10 +280,14 @@ public class TodoController {
 
 	@PostMapping("/{id}/delete")
 	public String delete(@PathVariable Long id, RedirectAttributes redirectAttributes) {
-		if (todoService.deleteById(id) > 0) {
-			redirectAttributes.addFlashAttribute("successMessage", "ToDoを削除しました");
-		} else {
-			redirectAttributes.addFlashAttribute("errorMessage", "削除に失敗しました");
+		try {
+			if (todoService.deleteById(id) > 0) {
+				redirectAttributes.addFlashAttribute("successMessage", "ToDoを削除しました");
+			} else {
+				redirectAttributes.addFlashAttribute("errorMessage", "削除に失敗しました");
+			}
+		} catch (IllegalArgumentException exception) {
+			redirectAttributes.addFlashAttribute("errorMessage", exception.getMessage());
 		}
 		return "redirect:/todo";
 	}

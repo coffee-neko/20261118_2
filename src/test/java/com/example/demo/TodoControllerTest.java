@@ -5,6 +5,7 @@ import java.util.List;
 
 import com.example.demo.mapper.TodoMapper;
 import com.example.demo.model.Todo;
+import com.example.demo.model.TodoProgress;
 import com.example.demo.model.TodoStatus;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -175,6 +177,87 @@ class TodoControllerTest {
 			assertEquals(todo.getDueDate(), updatedTodo.getDueDate());
 		} finally {
 			todoMapper.deleteById(todo.getId());
+		}
+	}
+
+	@Test
+	void registrationKeepsParentAndSearchShowsChildWithItsParentTitle() throws Exception {
+		TodoProgress initialProgress = todoMapper.findQuestProgress();
+		Todo parent = new Todo();
+		parent.setTitle("Parent registration target");
+		parent.setDisplayOrder(100);
+		parent.setStatus(TodoStatus.COMPLETED);
+		todoMapper.insert(parent);
+		String title = "Child registration target";
+		try {
+			mockMvc.perform(post("/todo/confirm").with(csrf()).param("title", title)
+					.param("description", "").param("parentId", parent.getId().toString()))
+					.andExpect(view().name("todo/confirm"))
+					.andExpect(model().attribute("parent", parent));
+			mockMvc.perform(post("/todo/complete").with(csrf()).param("title", title)
+					.param("parentId", parent.getId().toString()))
+					.andExpect(redirectedUrl("/todo"));
+			List<Todo> results = todoMapper.findPage(title, null, null, null, 10, 0);
+			assertEquals(1, results.size());
+			Todo child = results.get(0);
+			assertEquals(parent.getId(), child.getParentId());
+			assertEquals(parent.getTitle(), child.getParentTitle());
+			Todo parentRow = todoMapper.findPage(parent.getTitle(), null, null, null, 10, 0).get(0);
+			assertEquals(1L, parentRow.getChildCount());
+			assertEquals(0L, parentRow.getCompletedChildCount());
+			assertEquals(new TodoProgress(initialProgress.total() + 1, initialProgress.completed()),
+					todoMapper.findQuestProgress());
+			mockMvc.perform(get("/todo").param("keyword", title))
+					.andExpect(status().isOk())
+					.andExpect(model().attribute("todos", results))
+					.andExpect(model().attribute("totalCount", 1L));
+
+			mockMvc.perform(post("/todo/{id}/update", child.getId()).with(csrf())
+					.param("title", title).param("parentId", ""))
+					.andExpect(redirectedUrl("/todo"));
+			assertNull(todoMapper.findById(child.getId()).getParentId());
+		} finally {
+			todoMapper.findPage(title, null, null, null, 10, 0)
+					.forEach(todo -> todoMapper.deleteById(todo.getId()));
+			todoMapper.deleteById(parent.getId());
+		}
+	}
+
+	@Test
+	void parentWithChildrenCannotBeDeletedOrMovedAndChildCannotBeAParent() throws Exception {
+		Todo parent = new Todo();
+		parent.setTitle("Parent deletion target");
+		parent.setDisplayOrder(100);
+		todoMapper.insert(parent);
+		Todo child = new Todo();
+		child.setTitle("Child deletion target");
+		child.setDisplayOrder(101);
+		child.setParentId(parent.getId());
+		todoMapper.insert(child);
+		Todo other = new Todo();
+		other.setTitle("Independent task");
+		other.setDisplayOrder(102);
+		todoMapper.insert(other);
+		try {
+			mockMvc.perform(post("/todo/{id}/delete", parent.getId()).with(csrf()))
+					.andExpect(redirectedUrl("/todo"))
+					.andExpect(flash().attributeExists("errorMessage"));
+			for (Long invalidParentId : List.of(parent.getId(), child.getId(), other.getId())) {
+				mockMvc.perform(post("/todo/{id}/update", parent.getId()).with(csrf())
+						.param("title", parent.getTitle()).param("parentId", invalidParentId.toString()))
+						.andExpect(view().name("todo/edit"))
+						.andExpect(model().attributeExists("errorMessage"));
+			}
+			mockMvc.perform(post("/todo/complete").with(csrf()).param("title", "Invalid grandchild")
+					.param("parentId", child.getId().toString()))
+					.andExpect(view().name("todo/form"))
+					.andExpect(model().attributeExists("errorMessage"));
+			assertNull(todoMapper.findById(parent.getId()).getParentId());
+			assertEquals(parent.getId(), todoMapper.findById(child.getId()).getParentId());
+		} finally {
+			todoMapper.deleteById(child.getId());
+			todoMapper.deleteById(parent.getId());
+			todoMapper.deleteById(other.getId());
 		}
 	}
 }

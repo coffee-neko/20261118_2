@@ -82,7 +82,7 @@
         <div class="card-body">
             <h2 id="quest-progress-title" class="h5 mb-3">クエスト達成率</h2>
             <p class="mb-2">
-                全タスク <span th:text="${allTodoCount}">0</span>件 ／
+                子・独立タスク <span th:text="${allTodoCount}">0</span>件 ／
                 完了 <span th:text="${completedTodoCount}">0</span>件
                 （<span th:text="${completionRate}">0</span>%）
             </p>
@@ -99,7 +99,7 @@
     </p>
 
     <p th:if="${!hasSearchCondition and not #lists.isEmpty(todos)}" class="text-muted small">
-        行をドラッグ＆ドロップして、このページ内の表示順を変更できます。
+        ドラッグ＆ドロップで、このページ内の大作業・独立タスク同士、または同じ親の子タスク同士を並べ替えできます。
     </p>
     <p th:if="${hasSearchCondition}" class="text-muted small">
         検索または絞り込み中は、並び替えできません。
@@ -121,13 +121,25 @@
                     <th scope="col">操作</th>
                 </tr>
                 </thead>
-                <tbody id="todo-list" th:attr="data-page=${currentPage},data-reorder-enabled=${!hasSearchCondition}">
+                <tbody id="todo-list"
+                       th:attr="data-page=${currentPage},data-reorder-enabled=${!hasSearchCondition},data-reorder-url=@{/api/todo/reorder}">
                 <tr th:each="todo : ${todos}" th:with="completed=${todo.status.completed}"
-                    class="todo-row" th:attr="data-todo-id=${todo.id}"
+                    class="todo-row" th:attr="data-todo-id=${todo.id},data-parent-id=${todo.parentId}"
                     th:draggable="${!hasSearchCondition}">
                     <td th:text="${todo.id}">1</td>
-                    <td th:class="${completed} ? 'text-decoration-line-through text-muted' : ''"
-                        th:text="${todo.title}">ToDo の内容</td>
+                    <td th:classappend="${todo.parentId != null} ? 'ps-4' : ''">
+                        <span th:class="${completed} ? 'text-decoration-line-through text-muted' : ''"
+                              th:text="${todo.title}">ToDo の内容</span>
+                        <div th:if="${todo.parentId != null}" class="small text-muted"
+                             th:text="|親タスク #${todo.parentId} ${todo.parentTitle}|">親タスク</div>
+                        <div th:if="${todo.parentId == null}" class="small text-muted">
+                            <span th:if="${todo.childCount == 0}">子タスクなし</span>
+                            <span th:if="${todo.childCount > 0}"
+                                  th:text="|子タスク ${todo.childCount}件 ／ 完了 ${todo.completedChildCount}件（${todo.childCompletionRate}%）|">子タスクの進捗</span>
+                            <button type="button" class="btn btn-link btn-sm p-0"
+                                    th:if="${#sets.contains(parentsWithVisibleChildren, todo.id)}"
+                                    th:attr="data-toggle-children=${todo.id}" aria-expanded="true">子を閉じる</button>
+                        </div>
                     <td>
                         <span th:if="${todo.categoryName != null}" class="badge"
                               th:style="|background-color: ${todo.categoryColor};|"
@@ -159,10 +171,12 @@
                         <a class="btn btn-outline-primary btn-sm me-2"
                            th:href="@{/todo/{id}/edit(id=${todo.id})}">編集</a>
                         <form th:action="@{/todo/{id}/delete(id=${todo.id})}" method="post"
+                              th:if="${todo.childCount == 0}"
                               class="d-inline" onsubmit="return confirm('本当に削除しますか？');">
                             <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
                             <button type="submit" class="btn btn-danger btn-sm">削除</button>
                         </form>
+                        <span th:if="${todo.childCount > 0}" class="small text-muted">子タスクがあるため削除不可</span>
                     </td>
                 </tr>
                 </tbody>
@@ -218,55 +232,70 @@
         }, 3000);
     });
 
-    const todoList = document.querySelector('#todo-list[data-reorder-enabled="true"]');
+    const todoList = document.getElementById('todo-list');
     const reorderMessage = document.getElementById('reorder-message');
     const csrfToken = document.querySelector('meta[name="_csrf"]')?.content;
     const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content;
 
-    if (todoList) {
+    const todoRows = Array.from(document.querySelectorAll('#todo-list .todo-row'));
+    document.querySelectorAll('[data-toggle-children]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const expanded = button.getAttribute('aria-expanded') === 'true';
+            todoRows.filter((row) => row.dataset.parentId === button.dataset.toggleChildren)
+                .forEach((row) => { row.hidden = expanded; });
+            button.setAttribute('aria-expanded', String(!expanded));
+            button.textContent = expanded ? '子を開く' : '子を閉じる';
+        });
+    });
+
+    if (todoList?.dataset.reorderEnabled === 'true') {
         let draggingRow;
-        let originalOrder = [];
         let isSaving = false;
 
-        const rows = () => Array.from(todoList.querySelectorAll('.todo-row'));
-        const clearDropIndicators = () => rows().forEach((row) => {
+        const clearDropIndicators = () => todoRows.forEach((row) => {
             row.classList.remove('is-drop-before', 'is-drop-after');
         });
+        const canDropOn = (row) => !isSaving && draggingRow && draggingRow !== row
+            && draggingRow.dataset.parentId === row.dataset.parentId;
+        const isAfter = (row, event) => event.clientY > row.getBoundingClientRect().top + row.offsetHeight / 2;
 
-        rows().forEach((row) => {
+        todoRows.forEach((row) => {
             row.addEventListener('dragstart', (event) => {
                 if (isSaving) {
                     event.preventDefault();
                     return;
                 }
                 draggingRow = row;
-                originalOrder = rows().map((item) => item.dataset.todoId);
                 row.classList.add('is-dragging');
                 event.dataTransfer.effectAllowed = 'move';
                 event.dataTransfer.setData('text/plain', row.dataset.todoId);
             });
 
             row.addEventListener('dragover', (event) => {
-                if (!draggingRow || draggingRow === row) {
+                clearDropIndicators();
+                if (!canDropOn(row)) {
                     return;
                 }
                 event.preventDefault();
-                clearDropIndicators();
-                const insertAfter = event.clientY > row.getBoundingClientRect().top + row.offsetHeight / 2;
-                row.classList.add(insertAfter ? 'is-drop-after' : 'is-drop-before');
+                row.classList.add(isAfter(row, event) ? 'is-drop-after' : 'is-drop-before');
                 event.dataTransfer.dropEffect = 'move';
             });
 
             row.addEventListener('drop', async (event) => {
                 event.preventDefault();
-                if (!draggingRow || draggingRow === row || isSaving) {
+                clearDropIndicators();
+                if (!canDropOn(row)) {
                     return;
                 }
 
-                const insertAfter = event.clientY > row.getBoundingClientRect().top + row.offsetHeight / 2;
-                todoList.insertBefore(draggingRow, insertAfter ? row.nextSibling : row);
-                clearDropIndicators();
-                await saveOrder();
+                const parentId = row.dataset.parentId;
+                const siblings = todoRows.filter((item) => item.dataset.parentId === parentId);
+                const reordered = siblings.filter((item) => item !== draggingRow);
+                const targetIndex = reordered.indexOf(row) + (isAfter(row, event) ? 1 : 0);
+                reordered.splice(targetIndex, 0, draggingRow);
+                if (reordered.some((item, index) => item !== siblings[index])) {
+                    await saveOrder(parentId, reordered);
+                }
             });
 
             row.addEventListener('dragend', () => {
@@ -278,7 +307,7 @@
             });
         });
 
-        async function saveOrder() {
+        async function saveOrder(parentId, reordered) {
             isSaving = true;
             todoList.classList.add('is-saving');
             reorderMessage.textContent = '並び順を保存しています…';
@@ -289,12 +318,13 @@
                 if (csrfToken && csrfHeader) {
                     headers[csrfHeader] = csrfToken;
                 }
-                const response = await fetch('/api/todo/reorder', {
+                const response = await fetch(todoList.dataset.reorderUrl, {
                     method: 'PUT',
                     headers,
                     body: JSON.stringify({
                         page: Number(todoList.dataset.page),
-                        todoIds: rows().map((row) => Number(row.dataset.todoId))
+                        parentId: parentId ? Number(parentId) : null,
+                        todoIds: reordered.map((row) => Number(row.dataset.todoId))
                     })
                 });
                 if (!response.ok) {
@@ -302,10 +332,9 @@
                 }
                 reorderMessage.textContent = '並び順を保存しました。';
                 reorderMessage.className = 'small mb-2 text-success';
+                window.location.reload();
             } catch (error) {
-                const rowsById = new Map(rows().map((row) => [row.dataset.todoId, row]));
-                originalOrder.forEach((id) => todoList.appendChild(rowsById.get(id)));
-                reorderMessage.textContent = '保存に失敗したため、元の並び順に戻しました。';
+                reorderMessage.textContent = '並び順を保存できませんでした。ページを更新してからやり直してください。';
                 reorderMessage.className = 'small mb-2 text-danger';
             } finally {
                 isSaving = false;

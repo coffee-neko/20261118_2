@@ -13,9 +13,17 @@ public class Todo {
 	private LocalDate startDate;
 	private LocalDate dueDate;
 	private Integer displayOrder;
+	private Long parentId;
+	private String parentTitle;
+	private long childCount;
+	private long completedChildCount;
 	private Long categoryId;
 	private String categoryName;
 	private String categoryColor;
 	private Long assigneeId;
 	private String assigneeName;
+
+	public int getChildCompletionRate() {
+		return TodoProgress.percentage(childCount, completedChildCount);
+	}
 }

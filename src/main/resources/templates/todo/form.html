@@ -27,6 +27,16 @@
                         </div>
 
                         <div class="mb-3">
+                            <label for="parentId" class="form-label">親タスク</label>
+                            <select id="parentId" name="parentId" class="form-select">
+                                <option value="">親なし（大作業・独立タスク）</option>
+                                <option th:each="option : ${parentOptions}" th:value="${option.id}"
+                                        th:selected="${option.id.toString() == parentId}"
+                                        th:text="|#${option.id} ${option.title}|">大作業</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
                             <label for="categoryId" class="form-label">カテゴリ</label>
                             <select id="categoryId" name="categoryId" class="form-select">
                                 <option value="">未設定</option>
