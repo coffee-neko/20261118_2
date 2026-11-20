@@ -3,6 +3,8 @@ package com.example.demo;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -81,6 +83,22 @@ public class TodoController {
 		model.addAttribute("startItem", startItem);
 		model.addAttribute("endItem", endItem);
 		return "todo/list";
+	}
+
+	@GetMapping("/kanban")
+	public String kanban(Model model) {
+		TodoStatus[] statuses = TodoStatus.values();
+		Map<TodoStatus, List<Todo>> todosByStatus = new EnumMap<>(TodoStatus.class);
+		for (TodoStatus status : statuses) {
+			todosByStatus.put(status, new ArrayList<>());
+		}
+		for (Todo todo : todoService.findForKanban()) {
+			todosByStatus.get(todo.getStatus()).add(todo);
+		}
+		model.addAttribute("statusOptions", statuses);
+		model.addAttribute("todosByStatus", todosByStatus);
+		model.addAttribute("today", LocalDate.now(BUSINESS_ZONE));
+		return "todo/kanban";
 	}
 
 	private Map<Long, String> buildDisplayNumbers(List<Todo> orderedTodos) {

@@ -11,6 +11,8 @@ public interface TodoMapper {
 
 	List<Todo> findAll();
 
+	List<Todo> findForKanban();
+
 	List<Todo> findPage(@Param("keyword") String keyword, @Param("status") TodoStatus status,
 			@Param("categoryId") Long categoryId, @Param("assigneeId") Long assigneeId,
 			@Param("limit") int limit, @Param("offset") long offset);

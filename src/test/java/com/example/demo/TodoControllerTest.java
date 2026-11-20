@@ -11,15 +11,19 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
@@ -44,6 +48,59 @@ class TodoControllerTest {
 				.andExpect(status().isOk())
 				.andExpect(view().name("todo/list"))
 				.andExpect(model().attributeExists("todos"));
+	}
+
+	@Test
+	void kanbanStatusUpdateKeepsHierarchyAndRefreshesParentProgress() throws Exception {
+		Todo parent = new Todo();
+		parent.setTitle("Kanban parent");
+		parent.setDisplayOrder(100);
+		todoMapper.insert(parent);
+		Todo child = new Todo();
+		child.setTitle("Kanban child");
+		child.setStatus(TodoStatus.IN_PROGRESS);
+		child.setDisplayOrder(101);
+		child.setParentId(parent.getId());
+		todoMapper.insert(child);
+		try {
+			mockMvc.perform(get("/todo/kanban"))
+					.andExpect(status().isOk())
+					.andExpect(view().name("todo/kanban"))
+					.andExpect(content().string(containsString("親タスク Kanban parent")))
+					.andExpect(content().string(containsString("子タスク完了 0/1件")));
+
+			mockMvc.perform(put("/api/todo/{id}/status", child.getId()).with(csrf())
+					.contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"COMPLETED\"}"))
+					.andExpect(status().isNoContent());
+			Todo savedChild = todoMapper.findById(child.getId());
+			assertEquals(TodoStatus.COMPLETED, savedChild.getStatus());
+			assertEquals(parent.getId(), savedChild.getParentId());
+			assertEquals(child.getDisplayOrder(), savedChild.getDisplayOrder());
+			assertEquals(TodoStatus.NOT_STARTED, todoMapper.findById(parent.getId()).getStatus());
+
+			mockMvc.perform(get("/todo/kanban"))
+					.andExpect(status().isOk())
+					.andExpect(content().string(containsString("子タスク完了 1/1件")));
+			mockMvc.perform(get("/todo").param("keyword", child.getTitle()).param("status", "COMPLETED"))
+					.andExpect(status().isOk())
+					.andExpect(model().attribute("totalCount", 1L));
+		} finally {
+			todoMapper.deleteById(child.getId());
+			todoMapper.deleteById(parent.getId());
+		}
+	}
+
+	@Test
+	void kanbanStatusApiRejectsMissingCsrfInvalidStateAndMissingTask() throws Exception {
+		mockMvc.perform(put("/api/todo/{id}/status", Long.MAX_VALUE)
+				.contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"COMPLETED\"}"))
+				.andExpect(status().isForbidden());
+		mockMvc.perform(put("/api/todo/{id}/status", Long.MAX_VALUE).with(csrf())
+				.contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"UNKNOWN\"}"))
+				.andExpect(status().isBadRequest());
+		mockMvc.perform(put("/api/todo/{id}/status", Long.MAX_VALUE).with(csrf())
+				.contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"COMPLETED\"}"))
+				.andExpect(status().isNotFound());
 	}
 
 	@Test

@@ -62,7 +62,7 @@
         <include refid="hierarchyOrder"/>
     </select>
 
-    <select id="findPage" resultMap="todoResultMap">
+    <sql id="todosWithChildProgress">
         SELECT t.id, t.title, t.status, t.display_order, t.category_id, t.assignee_id,
                t.start_date, t.due_date, t.parent_id, p.title AS parent_title,
                (SELECT COUNT(*) FROM todos child WHERE child.parent_id = t.id) AS child_count,
@@ -73,6 +73,15 @@
         LEFT JOIN categories c ON c.id = t.category_id
         LEFT JOIN assignees a ON a.id = t.assignee_id
         LEFT JOIN todos p ON p.id = t.parent_id
+    </sql>
+
+    <select id="findForKanban" resultMap="todoResultMap">
+        <include refid="todosWithChildProgress"/>
+        <include refid="hierarchyOrder"/>
+    </select>
+
+    <select id="findPage" resultMap="todoResultMap">
+        <include refid="todosWithChildProgress"/>
         <include refid="searchConditions"/>
         <include refid="hierarchyOrder"/>
         LIMIT #{limit} OFFSET #{offset}
