@@ -115,6 +115,8 @@
                     <th scope="col">タイトル</th>
                     <th scope="col">カテゴリ</th>
                     <th scope="col">担当者</th>
+                    <th scope="col">開始日</th>
+                    <th scope="col">期限</th>
                     <th scope="col">状態</th>
                     <th scope="col">操作</th>
                 </tr>
@@ -132,6 +134,12 @@
                         <span th:unless="${todo.categoryName != null}" class="badge text-bg-secondary">未設定</span>
                     </td>
                     <td th:text="${todo.assigneeName != null ? todo.assigneeName : '未設定'}">未設定</td>
+                    <td class="text-nowrap" th:text="${todo.startDate != null ? todo.startDate : '未設定'}">未設定</td>
+                    <td class="text-nowrap">
+                        <span th:text="${todo.dueDate != null ? todo.dueDate : '未設定'}">未設定</span>
+                        <span class="badge text-bg-danger"
+                              th:if="${!todo.completed and todo.dueDate != null and todo.dueDate.isBefore(today)}">期限超過</span>
+                    </td>
                     <td>
                         <span class="badge"
                               th:classappend="${todo.completed} ? ' text-bg-success' : ' text-bg-secondary'"

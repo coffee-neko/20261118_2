@@ -28,6 +28,7 @@ public class TodoService {
 
 	@Transactional
 	public void create(Todo todo) {
+		validateDates(todo);
 		validateCategory(todo.getCategoryId());
 		validateAssignee(todo.getAssigneeId());
 		Integer maxDisplayOrder = todoMapper.findMaxDisplayOrder();
@@ -76,19 +77,21 @@ public class TodoService {
 	}
 
 	public int update(Todo todo) {
+		validateDates(todo);
 		validateCategory(todo.getCategoryId());
 		validateAssignee(todo.getAssigneeId());
 		return todoMapper.update(todo);
 	}
 
 	public boolean toggleCompleted(Long id) {
-		Todo todo = todoMapper.findById(id);
-		if (todo == null) {
-			return false;
-		}
+		return todoMapper.toggleCompleted(id) > 0;
+	}
 
-		todo.setCompleted(!Boolean.TRUE.equals(todo.getCompleted()));
-		return todoMapper.update(todo) > 0;
+	public void validateDates(Todo todo) {
+		if (todo.getStartDate() != null && todo.getDueDate() != null
+				&& todo.getStartDate().isAfter(todo.getDueDate())) {
+			throw new IllegalArgumentException("開始日は期限以前の日付を入力してください。");
+		}
 	}
 
 	public int deleteById(Long id) {

@@ -1,5 +1,9 @@
 package com.example.demo;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
+
 import com.example.demo.model.Todo;
 import com.example.demo.service.TodoService;
 import org.springframework.stereotype.Controller;
@@ -16,6 +20,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class TodoController {
 
 	private static final int PAGE_SIZE = 10;
+	private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Tokyo");
 	private static final String STATUS_ALL = "all";
 	private static final String STATUS_INCOMPLETE = "incomplete";
 	private static final String STATUS_COMPLETED = "completed";
@@ -47,6 +52,7 @@ public class TodoController {
 		long endItem = Math.min(offset + PAGE_SIZE, totalCount);
 
 		model.addAttribute("todos", todoService.findPage(keyword, completed, categoryId, assigneeId, PAGE_SIZE, offset));
+		model.addAttribute("today", LocalDate.now(BUSINESS_ZONE));
 		model.addAttribute("keyword", keyword);
 		model.addAttribute("status", selectedStatus);
 		model.addAttribute("categories", todoService.findAllCategories());
@@ -85,9 +91,13 @@ public class TodoController {
 
 	@GetMapping("/new")
 	public String newTodo(Model model) {
+		addFormOptions(model);
+		return "todo/form";
+	}
+
+	private void addFormOptions(Model model) {
 		model.addAttribute("categories", todoService.findAllCategories());
 		model.addAttribute("assignees", todoService.findAllAssignees());
-		return "todo/form";
 	}
 
 	@GetMapping("/{id}/edit")
@@ -97,8 +107,7 @@ public class TodoController {
 			return "redirect:/todo";
 		}
 		model.addAttribute("todo", todo);
-		model.addAttribute("categories", todoService.findAllCategories());
-		model.addAttribute("assignees", todoService.findAllAssignees());
+		addFormOptions(model);
 		return "todo/edit";
 	}
 
@@ -114,13 +123,20 @@ public class TodoController {
 			@RequestParam(required = false) Boolean done,
 			@RequestParam(required = false) Long categoryId,
 			@RequestParam(required = false) Long assigneeId,
+			@RequestParam(required = false) String startDate,
+			@RequestParam(required = false) String dueDate,
 			Model model) {
-		model.addAttribute("title", title);
-		model.addAttribute("description", description);
-		model.addAttribute("done", Boolean.TRUE.equals(done));
-		model.addAttribute("categoryId", categoryId);
+		addRegistrationInput(model, title, description, done, categoryId, assigneeId, startDate, dueDate);
+		try {
+			Todo todo = new Todo();
+			todo.setStartDate(parseDate(startDate, "開始日"));
+			todo.setDueDate(parseDate(dueDate, "期限"));
+			todoService.validateDates(todo);
+		} catch (IllegalArgumentException exception) {
+			model.addAttribute("errorMessage", exception.getMessage());
+			return newTodo(model);
+		}
 		model.addAttribute("category", todoService.findCategoryById(categoryId));
-		model.addAttribute("assigneeId", assigneeId);
 		model.addAttribute("assignee", todoService.findAssigneeById(assigneeId));
 		return "todo/confirm";
 	}
@@ -133,17 +149,22 @@ public class TodoController {
 	@PostMapping("/complete")
 	public String complete(@RequestParam String title, @RequestParam(required = false) Long categoryId,
 			@RequestParam(required = false) Long assigneeId,
-			RedirectAttributes redirectAttributes) {
+			@RequestParam(required = false) String description, @RequestParam(required = false) Boolean done,
+			@RequestParam(required = false) String startDate, @RequestParam(required = false) String dueDate,
+			Model model) {
 		Todo todo = new Todo();
 		todo.setTitle(title);
 		todo.setCompleted(false);
 		todo.setCategoryId(categoryId);
 		todo.setAssigneeId(assigneeId);
 		try {
+			todo.setStartDate(parseDate(startDate, "開始日"));
+			todo.setDueDate(parseDate(dueDate, "期限"));
 			todoService.create(todo);
 		} catch (IllegalArgumentException exception) {
-			redirectAttributes.addFlashAttribute("errorMessage", exception.getMessage());
-			return "redirect:/todo/new";
+			addRegistrationInput(model, title, description, done, categoryId, assigneeId, startDate, dueDate);
+			model.addAttribute("errorMessage", exception.getMessage());
+			return newTodo(model);
 		}
 		return "redirect:/todo";
 	}
@@ -152,28 +173,65 @@ public class TodoController {
 	public String update(@PathVariable Long id, @RequestParam String title,
 			@RequestParam(required = false) Long categoryId,
 			@RequestParam(required = false) Long assigneeId,
-			RedirectAttributes redirectAttributes) {
+			@RequestParam(required = false) String startDate, @RequestParam(required = false) String dueDate,
+			Model model, RedirectAttributes redirectAttributes) {
 		Todo todo = todoService.findById(id);
 		if (todo != null) {
-			if (categoryId != null && todoService.findCategoryById(categoryId) == null) {
-				redirectAttributes.addFlashAttribute("errorMessage", "指定されたカテゴリは存在しません。");
-				return "redirect:/todo/" + id + "/edit";
-			}
-			if (assigneeId != null && todoService.findAssigneeById(assigneeId) == null) {
-				redirectAttributes.addFlashAttribute("errorMessage", "指定された担当者は存在しません。");
-				return "redirect:/todo/" + id + "/edit";
-			}
 			todo.setTitle(title);
 			todo.setCategoryId(categoryId);
 			todo.setAssigneeId(assigneeId);
-			if (todoService.update(todo) > 0) {
-				redirectAttributes.addFlashAttribute("successMessage", "更新が完了しました");
-				return "redirect:/todo";
+			try {
+				if (startDate != null) {
+					todo.setStartDate(parseDate(startDate, "開始日"));
+				}
+				if (dueDate != null) {
+					todo.setDueDate(parseDate(dueDate, "期限"));
+				}
+				if (todoService.update(todo) > 0) {
+					redirectAttributes.addFlashAttribute("successMessage", "更新が完了しました");
+					return "redirect:/todo";
+				}
+			} catch (IllegalArgumentException exception) {
+				model.addAttribute("todo", todo);
+				model.addAttribute("startDate", startDate);
+				model.addAttribute("dueDate", dueDate);
+				model.addAttribute("errorMessage", exception.getMessage());
+				addFormOptions(model);
+				return "todo/edit";
 			}
 		}
 
 		redirectAttributes.addFlashAttribute("errorMessage", "更新に失敗しました");
 		return "redirect:/todo";
+	}
+
+	private void addRegistrationInput(Model model, String title, String description, Boolean done,
+			Long categoryId, Long assigneeId, String startDate, String dueDate) {
+		model.addAttribute("title", title);
+		model.addAttribute("description", description);
+		model.addAttribute("done", Boolean.TRUE.equals(done));
+		model.addAttribute("categoryId", categoryId);
+		model.addAttribute("assigneeId", assigneeId);
+		model.addAttribute("startDate", startDate);
+		model.addAttribute("dueDate", dueDate);
+	}
+
+	private LocalDate parseDate(String value, String label) {
+		if (value == null || value.isEmpty()) {
+			return null;
+		}
+
+		String message = label + "は yyyy-MM-dd 形式で実在する日付を入力してください。";
+		LocalDate date;
+		try {
+			date = LocalDate.parse(value);
+		} catch (DateTimeParseException exception) {
+			throw new IllegalArgumentException(message, exception);
+		}
+		if (value.length() != 10 || date.getYear() < 1) {
+			throw new IllegalArgumentException(message);
+		}
+		return date;
 	}
 
 	@PostMapping("/{id}/toggle")

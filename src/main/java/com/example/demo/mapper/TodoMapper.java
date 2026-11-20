@@ -30,6 +30,8 @@ public interface TodoMapper {
 
 	int update(Todo todo);
 
+	int toggleCompleted(@Param("id") Long id);
+
 	int updateDisplayOrder(@Param("id") Long id, @Param("displayOrder") int displayOrder);
 
 	int deleteById(Long id);

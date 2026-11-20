@@ -1,5 +1,7 @@
 package com.example.demo;
 
+import java.time.LocalDate;
+
 import com.example.demo.mapper.TodoMapper;
 import com.example.demo.model.Todo;
 import org.junit.jupiter.api.Test;
@@ -77,11 +79,15 @@ class TodoControllerTest {
 		mockMvc.perform(post("/todo/confirm").with(csrf())
 				.param("title", "Sample task")
 				.param("description", "Sample description")
+				.param("startDate", "2026-11-20")
+				.param("dueDate", "2026-11-20")
 				.param("done", "true"))
 				.andExpect(status().isOk())
 				.andExpect(view().name("todo/confirm"))
 				.andExpect(model().attribute("title", "Sample task"))
 				.andExpect(model().attribute("description", "Sample description"))
+				.andExpect(model().attribute("startDate", "2026-11-20"))
+				.andExpect(model().attribute("dueDate", "2026-11-20"))
 				.andExpect(model().attribute("done", true));
 	}
 
@@ -130,13 +136,25 @@ class TodoControllerTest {
 		Todo todo = new Todo();
 		todo.setTitle("Toggle target");
 		todo.setCompleted(false);
+		todo.setDisplayOrder(100);
+		todo.setCategoryId(1L);
+		todo.setAssigneeId(1L);
+		todo.setStartDate(LocalDate.of(2026, 11, 1));
+		todo.setDueDate(LocalDate.of(2026, 11, 15));
 		todoMapper.insert(todo);
 
 		try {
 			mockMvc.perform(post("/todo/{id}/toggle", todo.getId()).with(csrf()))
 					.andExpect(status().is3xxRedirection())
 					.andExpect(redirectedUrl("/todo"));
-			assertEquals(true, todoMapper.findById(todo.getId()).getCompleted());
+			Todo updatedTodo = todoMapper.findById(todo.getId());
+			assertEquals(true, updatedTodo.getCompleted());
+			assertEquals(todo.getTitle(), updatedTodo.getTitle());
+			assertEquals(todo.getDisplayOrder(), updatedTodo.getDisplayOrder());
+			assertEquals(todo.getCategoryId(), updatedTodo.getCategoryId());
+			assertEquals(todo.getAssigneeId(), updatedTodo.getAssigneeId());
+			assertEquals(todo.getStartDate(), updatedTodo.getStartDate());
+			assertEquals(todo.getDueDate(), updatedTodo.getDueDate());
 		} finally {
 			todoMapper.deleteById(todo.getId());
 		}
