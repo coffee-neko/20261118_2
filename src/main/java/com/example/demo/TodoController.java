@@ -3,7 +3,9 @@ package com.example.demo;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -12,6 +14,8 @@ import com.example.demo.model.TodoProgress;
 import com.example.demo.model.TodoStatus;
 import com.example.demo.service.TodoService;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,6 +39,7 @@ public class TodoController {
 	}
 
 	@GetMapping
+	@Transactional(readOnly = true, isolation = Isolation.SERIALIZABLE)
 	public String list(@RequestParam(defaultValue = "1") int page,
 			@RequestParam(defaultValue = "") String keyword,
 			@RequestParam(defaultValue = STATUS_ALL) String status,
@@ -52,6 +57,9 @@ public class TodoController {
 
 		List<Todo> todos = todoService.findPage(keyword, selectedStatus, categoryId, assigneeId, PAGE_SIZE, offset);
 		model.addAttribute("todos", todos);
+		if (!todos.isEmpty()) {
+			model.addAttribute("displayNumbers", buildDisplayNumbers(todoService.findAll()));
+		}
 		model.addAttribute("parentsWithVisibleChildren", todos.stream()
 				.map(Todo::getParentId).filter(Objects::nonNull).collect(Collectors.toSet()));
 		model.addAttribute("today", LocalDate.now(BUSINESS_ZONE));
@@ -73,6 +81,23 @@ public class TodoController {
 		model.addAttribute("startItem", startItem);
 		model.addAttribute("endItem", endItem);
 		return "todo/list";
+	}
+
+	private Map<Long, String> buildDisplayNumbers(List<Todo> orderedTodos) {
+		Map<Long, String> numbers = new HashMap<>();
+		Map<Long, Integer> childNumbers = new HashMap<>();
+		int rootNumber = 0;
+		// The full hierarchy is ordered with each parent before its children.
+		for (Todo todo : orderedTodos) {
+			Long parentId = todo.getParentId();
+			if (parentId == null) {
+				numbers.put(todo.getId(), Integer.toString(++rootNumber));
+			} else {
+				int childNumber = childNumbers.merge(parentId, 1, Integer::sum);
+				numbers.put(todo.getId(), numbers.get(parentId) + "-" + childNumber);
+			}
+		}
+		return numbers;
 	}
 
 	@GetMapping("/new")
