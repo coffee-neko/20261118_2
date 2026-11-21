@@ -10,8 +10,14 @@
     --gantt-idle: #586474;
     --gantt-active: #315fad;
     --gantt-done: #23764f;
-    --gantt-task-width: min(19rem, 46vw);
-    --gantt-day-width: 2.75rem;
+    --gantt-saturday-bg: #e4edfa;
+    --gantt-saturday-text: #274e82;
+    --gantt-sunday-bg: #f9e9e9;
+    --gantt-sunday-text: #972e38;
+    --gantt-task-width: clamp(8rem, 21vw, 16rem);
+    --gantt-day-min-width: 1.25rem;
+    --gantt-detail-task-width: min(19rem, 46vw);
+    --gantt-detail-day-width: 2.75rem;
     min-height: 100vh;
     padding: clamp(.75rem, 3vw, 2rem);
     background: var(--gantt-bg);
@@ -47,12 +53,14 @@ body {
     font: inherit;
 }
 
-.gantt-controls a[aria-current="page"] {
+.gantt-controls a[aria-current="page"],
+.gantt-modes button[aria-pressed="true"] {
     background: var(--gantt-link);
     color: var(--gantt-surface);
 }
 
 .gantt-page button { color: var(--gantt-text); cursor: pointer; }
+.gantt-modes:not([hidden]) { display: flex; gap: .35rem; }
 
 .gantt-scroll {
     max-height: 65vh;
@@ -64,10 +72,18 @@ body {
 }
 
 .gantt-table {
-    width: calc(var(--gantt-task-width) + var(--days) * var(--gantt-day-width));
+    width: max(100%, calc(var(--gantt-task-width) + var(--days) * var(--gantt-day-min-width)));
     table-layout: fixed;
     border-collapse: separate;
     border-spacing: 0;
+}
+
+.gantt-scroll[data-mode="detail"] {
+    --gantt-task-width: var(--gantt-detail-task-width);
+}
+
+.gantt-scroll[data-mode="detail"] .gantt-table {
+    width: calc(var(--gantt-task-width) + var(--days) * var(--gantt-detail-day-width));
 }
 
 .gantt-table th,
@@ -119,15 +135,31 @@ body {
 
 .gantt-day-grid {
     display: grid;
-    grid-template-columns: repeat(var(--days), var(--gantt-day-width));
+    grid-template-columns: repeat(var(--days), minmax(0, 1fr));
     align-items: center;
 }
 
 .gantt-day-grid time {
+    align-self: stretch;
     border-right: 1px solid var(--gantt-border);
-    padding: .5rem 0;
+    padding: .35rem 0;
     text-align: center;
-    font-size: .85rem;
+    font-size: .75rem;
+    line-height: 1.2;
+}
+
+.gantt-scroll[data-mode="detail"] .gantt-day-grid time { font-size: .85rem; }
+
+.gantt-weekend-label { display: block; font-size: .65rem; }
+
+.gantt-day-grid time[data-weekday="SATURDAY"] {
+    background: var(--gantt-saturday-bg);
+    color: var(--gantt-saturday-text);
+}
+
+.gantt-day-grid time[data-weekday="SUNDAY"] {
+    background: var(--gantt-sunday-bg);
+    color: var(--gantt-sunday-text);
 }
 
 .gantt-day-grid time[aria-current="date"] {
@@ -138,8 +170,10 @@ body {
 .gantt-track { min-height: 2rem; }
 
 .gantt-table td {
-    background-image: linear-gradient(to left, var(--gantt-border) 1px, transparent 1px);
-    background-size: var(--gantt-day-width) 100%;
+    --gantt-day-share: calc(100% / var(--days));
+    background-image: repeating-linear-gradient(to right,
+        transparent 0 calc(var(--gantt-day-share) - 1px),
+        var(--gantt-border) calc(var(--gantt-day-share) - 1px) var(--gantt-day-share));
 }
 
 .gantt-table tr { --status-color: var(--gantt-idle); }
@@ -174,3 +208,8 @@ body {
     font-size: .75rem;
     font-weight: 650;
 }
+
+.gantt-marker-full,
+.gantt-scroll[data-mode="detail"] .gantt-marker-short { display: none; }
+
+.gantt-scroll[data-mode="detail"] .gantt-marker-full { display: inline; }
