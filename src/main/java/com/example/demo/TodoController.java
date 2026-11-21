@@ -1,8 +1,10 @@
 package com.example.demo;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -17,6 +19,11 @@ import com.example.demo.model.Todo;
 import com.example.demo.model.TodoProgress;
 import com.example.demo.model.TodoStatus;
 import com.example.demo.service.TodoService;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
@@ -85,6 +92,22 @@ public class TodoController {
 		model.addAttribute("startItem", startItem);
 		model.addAttribute("endItem", endItem);
 		return "todo/list";
+	}
+
+	@GetMapping("/export.csv")
+	public ResponseEntity<byte[]> exportCsv(@RequestParam(defaultValue = "") String keyword,
+			@RequestParam(defaultValue = STATUS_ALL) String status,
+			@RequestParam(required = false) Long categoryId,
+			@RequestParam(required = false) Long assigneeId) {
+		List<Todo> todos = todoService.findForExport(keyword, findStatus(status), categoryId, assigneeId);
+		String date = LocalDate.now(BUSINESS_ZONE).format(DateTimeFormatter.BASIC_ISO_DATE);
+		String filename = "nencho-tasks-" + date + ".csv";
+		ContentDisposition attachment = ContentDisposition.attachment().filename(filename).build();
+		return ResponseEntity.ok()
+				.contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
+				.cacheControl(CacheControl.noStore())
+				.header(HttpHeaders.CONTENT_DISPOSITION, attachment.toString())
+				.body(TodoCsv.encode(todos));
 	}
 
 	@GetMapping("/kanban")

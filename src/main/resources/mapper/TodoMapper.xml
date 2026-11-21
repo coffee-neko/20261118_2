@@ -51,7 +51,7 @@
         </where>
     </sql>
 
-    <select id="findAll" resultMap="todoResultMap">
+    <sql id="todosWithDetails">
         SELECT t.id, t.title, t.status, t.display_order, t.category_id, t.assignee_id,
                t.start_date, t.due_date, t.parent_id, p.title AS parent_title,
                c.name AS category_name, c.color AS category_color, a.name AS assignee_name
@@ -59,6 +59,16 @@
         LEFT JOIN categories c ON c.id = t.category_id
         LEFT JOIN assignees a ON a.id = t.assignee_id
         LEFT JOIN todos p ON p.id = t.parent_id
+    </sql>
+
+    <select id="findAll" resultMap="todoResultMap">
+        <include refid="todosWithDetails"/>
+        <include refid="hierarchyOrder"/>
+    </select>
+
+    <select id="findForExport" resultMap="todoResultMap">
+        <include refid="todosWithDetails"/>
+        <include refid="searchConditions"/>
         <include refid="hierarchyOrder"/>
     </select>
 

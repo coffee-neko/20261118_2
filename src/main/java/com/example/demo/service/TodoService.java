@@ -55,6 +55,10 @@ public class TodoService {
 		return todoMapper.findForKanban();
 	}
 
+	public List<Todo> findForExport(String keyword, TodoStatus status, Long categoryId, Long assigneeId) {
+		return todoMapper.findForExport(keyword, status, categoryId, assigneeId);
+	}
+
 	public List<Todo> findPage(String keyword, TodoStatus status, Long categoryId, Long assigneeId, int limit, long offset) {
 		return todoMapper.findPage(keyword, status, categoryId, assigneeId, limit, offset);
 	}
