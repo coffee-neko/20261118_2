@@ -1,6 +1,7 @@
 package com.example.demo;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
@@ -10,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import com.example.demo.model.Todo;
 import com.example.demo.model.TodoProgress;
@@ -99,6 +101,35 @@ public class TodoController {
 		model.addAttribute("todosByStatus", todosByStatus);
 		model.addAttribute("today", LocalDate.now(BUSINESS_ZONE));
 		return "todo/kanban";
+	}
+
+	@GetMapping("/gantt")
+	public String gantt(@RequestParam(name = "month", required = false) String requestedMonth, Model model) {
+		LocalDate today = LocalDate.now(BUSINESS_ZONE);
+		YearMonth currentMonth = YearMonth.from(today);
+		YearMonth month = currentMonth;
+		if (requestedMonth != null) {
+			try {
+				month = TodoGantt.parseMonth(requestedMonth);
+			} catch (IllegalArgumentException | DateTimeParseException exception) {
+				model.addAttribute("monthError", "年月は0001-01から9999-12までの範囲で指定してください。今月を表示しています。");
+			}
+		}
+
+		YearMonth displayMonth = month;
+		List<Todo> todos = todoService.findForKanban();
+		Map<Long, TodoGantt.Placement> placements = todos.stream().collect(Collectors.toMap(
+				Todo::getId, todo -> TodoGantt.place(todo, displayMonth)));
+		model.addAttribute("todos", todos);
+		model.addAttribute("displayNumbers", buildDisplayNumbers(todos));
+		model.addAttribute("placements", placements);
+		model.addAttribute("today", today);
+		model.addAttribute("month", displayMonth);
+		model.addAttribute("previousMonth", TodoGantt.FIRST_MONTH.equals(displayMonth) ? null : displayMonth.minusMonths(1));
+		model.addAttribute("nextMonth", TodoGantt.LAST_MONTH.equals(displayMonth) ? null : displayMonth.plusMonths(1));
+		model.addAttribute("days", IntStream.rangeClosed(1, displayMonth.lengthOfMonth())
+				.mapToObj(displayMonth::atDay).toList());
+		return "todo/gantt";
 	}
 
 	private Map<Long, String> buildDisplayNumbers(List<Todo> orderedTodos) {

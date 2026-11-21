@@ -63,6 +63,7 @@
         <h1 class="h2 mb-0">年調クエスト <span class="text-body-secondary">カンバン</span></h1>
         <div class="d-flex flex-wrap gap-2">
             <a class="btn btn-outline-primary" th:href="@{/todo}">一覧へ</a>
+            <a class="btn btn-outline-primary" th:href="@{/todo/gantt}">ガント</a>
             <a class="btn btn-primary" th:href="@{/todo/new}">新規登録</a>
             <form th:action="@{/logout}" method="post">
                 <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">

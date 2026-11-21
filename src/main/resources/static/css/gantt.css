@@ -1,0 +1,176 @@
+.gantt-page {
+    --gantt-bg: #f5f7fa;
+    --gantt-surface: #fff;
+    --gantt-header: #eef2f7;
+    --gantt-border: #d9e0e8;
+    --gantt-text: #172332;
+    --gantt-muted: #49586a;
+    --gantt-link: #254d99;
+    --gantt-warning: #a32222;
+    --gantt-idle: #586474;
+    --gantt-active: #315fad;
+    --gantt-done: #23764f;
+    --gantt-task-width: min(19rem, 46vw);
+    --gantt-day-width: 2.75rem;
+    min-height: 100vh;
+    padding: clamp(.75rem, 3vw, 2rem);
+    background: var(--gantt-bg);
+    color: var(--gantt-text);
+}
+
+body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+}
+
+.gantt-header,
+.gantt-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+}
+
+.gantt-header { justify-content: space-between; }
+.gantt-page h1 { margin: 0; font-size: 1.65rem; }
+.gantt-page h1 span { color: var(--gantt-muted); }
+.gantt-page h2 { margin: 1rem 0 .5rem; font-size: 1.25rem; }
+.gantt-page a { color: var(--gantt-link); }
+
+.gantt-controls a,
+.gantt-page button,
+.gantt-page input {
+    padding: .35rem .6rem;
+    border: 1px solid var(--gantt-border);
+    border-radius: .35rem;
+    background: var(--gantt-surface);
+    font: inherit;
+}
+
+.gantt-controls a[aria-current="page"] {
+    background: var(--gantt-link);
+    color: var(--gantt-surface);
+}
+
+.gantt-page button { color: var(--gantt-text); cursor: pointer; }
+
+.gantt-scroll {
+    max-height: 65vh;
+    margin-top: .8rem;
+    overflow: auto;
+    border: 1px solid var(--gantt-border);
+    border-radius: .4rem;
+    background: var(--gantt-surface);
+}
+
+.gantt-table {
+    width: calc(var(--gantt-task-width) + var(--days) * var(--gantt-day-width));
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.gantt-table th,
+.gantt-table td {
+    padding: 0;
+    border-bottom: 1px solid var(--gantt-border);
+    vertical-align: middle;
+}
+
+.gantt-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--gantt-header);
+}
+
+.gantt-table .gantt-task {
+    box-sizing: border-box;
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    width: var(--gantt-task-width);
+    border-right: 1px solid var(--gantt-border);
+    background: var(--gantt-surface);
+    text-align: left;
+}
+
+.gantt-table thead .gantt-task {
+    z-index: 3;
+    padding-left: .7rem;
+    background: var(--gantt-header);
+}
+
+.gantt-task-details {
+    padding: .5rem .7rem;
+    font-weight: normal;
+    overflow-wrap: anywhere;
+}
+
+.gantt-table tr[data-parent-id] .gantt-task-details { padding-left: 1.4rem; }
+.gantt-title { font-weight: 650; }
+.gantt-meta, .gantt-warning { margin: .2rem 0 0; font-size: .85rem; }
+.gantt-meta, .gantt-progress { display: flex; flex-wrap: wrap; align-items: center; gap: .15rem .55rem; }
+.gantt-meta { color: var(--gantt-muted); }
+.gantt-warning { color: var(--gantt-warning); font-weight: 650; }
+.gantt-progress { margin-top: .25rem; font-size: .8rem; }
+.gantt-progress progress { width: min(4rem, 100%); accent-color: var(--gantt-done); }
+.gantt-progress button { padding: .15rem .4rem; }
+
+.gantt-day-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--days), var(--gantt-day-width));
+    align-items: center;
+}
+
+.gantt-day-grid time {
+    border-right: 1px solid var(--gantt-border);
+    padding: .5rem 0;
+    text-align: center;
+    font-size: .85rem;
+}
+
+.gantt-day-grid time[aria-current="date"] {
+    background: var(--gantt-link);
+    color: var(--gantt-surface);
+}
+
+.gantt-track { min-height: 2rem; }
+
+.gantt-table td {
+    background-image: linear-gradient(to left, var(--gantt-border) 1px, transparent 1px);
+    background-size: var(--gantt-day-width) 100%;
+}
+
+.gantt-table tr { --status-color: var(--gantt-idle); }
+.gantt-table tr[data-status="IN_PROGRESS"] { --status-color: var(--gantt-active); }
+.gantt-table tr[data-status="COMPLETED"] { --status-color: var(--gantt-done); }
+.gantt-status { color: var(--status-color); font-weight: 650; }
+
+.gantt-bar,
+.gantt-marker {
+    background: var(--status-color);
+    color: var(--gantt-surface);
+}
+
+.gantt-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 1.2rem;
+    margin: 0 1px;
+    padding: 0 .2rem;
+    border-radius: .3rem;
+    font-size: .75rem;
+}
+
+.gantt-bar.continues-before::before { content: "‹"; }
+.gantt-bar.continues-after::after { content: "›"; margin-left: auto; }
+
+.gantt-marker {
+    justify-self: center;
+    padding: .15rem .25rem;
+    border-radius: .3rem;
+    font-size: .75rem;
+    font-weight: 650;
+}
