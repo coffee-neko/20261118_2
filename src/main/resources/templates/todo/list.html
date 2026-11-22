@@ -159,6 +159,7 @@
         <a class="btn btn-outline-primary" th:href="@{/todo/gantt}">ガント</a>
         <a class="btn btn-outline-primary"
            th:href="@{/todo/export.csv(keyword=${keyword}, status=${status}, categoryId=${categoryId}, assigneeId=${assigneeId})}">CSV出力</a>
+        <a class="btn btn-outline-primary" th:href="@{/todo/import}">CSVインポート</a>
         <a class="btn btn-primary" th:href="@{/todo/new}">新規登録</a>
         <form th:action="@{/logout}" method="post" class="d-inline">
             <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">

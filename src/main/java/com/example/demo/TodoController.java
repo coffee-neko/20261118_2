@@ -35,6 +35,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import static com.example.demo.service.TodoService.parseDate;
+
 @Controller
 @RequestMapping("/todo")
 public class TodoController {
@@ -342,24 +344,6 @@ public class TodoController {
 			throw new IllegalArgumentException("状態を未着手・進行中・完了から選択してください。");
 		}
 		return status;
-	}
-
-	private LocalDate parseDate(String value, String label) {
-		if (value == null || value.isEmpty()) {
-			return null;
-		}
-
-		String message = label + "は yyyy-MM-dd 形式で実在する日付を入力してください。";
-		LocalDate date;
-		try {
-			date = LocalDate.parse(value);
-		} catch (DateTimeParseException exception) {
-			throw new IllegalArgumentException(message, exception);
-		}
-		if (value.length() != 10 || date.getYear() < 1) {
-			throw new IllegalArgumentException(message);
-		}
-		return date;
 	}
 
 	@PostMapping("/{id}/status")

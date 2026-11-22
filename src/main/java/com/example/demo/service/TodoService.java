@@ -1,5 +1,7 @@
 package com.example.demo.service;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -126,6 +128,24 @@ public class TodoService {
 
 	public boolean updateStatus(Long id, TodoStatus status) {
 		return todoMapper.updateStatus(id, status) > 0;
+	}
+
+	public static LocalDate parseDate(String value, String label) {
+		if (value == null || value.isEmpty()) {
+			return null;
+		}
+
+		String message = label + "は yyyy-MM-dd 形式で実在する日付を入力してください。";
+		LocalDate date;
+		try {
+			date = LocalDate.parse(value);
+		} catch (DateTimeParseException exception) {
+			throw new IllegalArgumentException(message, exception);
+		}
+		if (value.length() != 10 || date.getYear() < 1) {
+			throw new IllegalArgumentException(message);
+		}
+		return date;
 	}
 
 	public void validateDates(Todo todo) {

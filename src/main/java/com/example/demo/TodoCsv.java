@@ -8,12 +8,14 @@ import com.example.demo.model.Todo;
 
 final class TodoCsv {
 
+	static final List<String> HEADER = List.of("ID", "親ID", "タスク名", "カテゴリ", "担当者", "開始日", "期限", "ステータス", "表示順");
+
 	private TodoCsv() {
 	}
 
 	static byte[] encode(List<Todo> todos) {
 		StringBuilder csv = new StringBuilder("\uFEFF");
-		appendRow(csv, "ID", "親ID", "タスク名", "カテゴリ", "担当者", "開始日", "期限", "ステータス", "表示順");
+		appendRow(csv, HEADER.toArray(String[]::new));
 		for (Todo todo : todos) {
 			appendRow(csv,
 					Objects.toString(todo.getId(), ""),
@@ -27,6 +29,10 @@ final class TodoCsv {
 					Objects.toString(todo.getDisplayOrder(), ""));
 		}
 		return csv.toString().getBytes(StandardCharsets.UTF_8);
+	}
+
+	static boolean hasExportPrefix(String text) {
+		return text.startsWith("'") && safeText(text.substring(1)).equals(text);
 	}
 
 	private static String safeText(String value) {

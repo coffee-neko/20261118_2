@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ToDo CSVインポート</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+          crossorigin="anonymous">
+</head>
+<body class="bg-light">
+<main class="container py-5">
+    <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-4">
+        <h1 class="h2 mb-0">CSVインポート</h1>
+        <a class="btn btn-outline-secondary" th:href="@{/todo}">ToDo一覧に戻る</a>
+    </div>
+
+    <form class="card card-body mb-4" th:action="@{/todo/import/preview}" method="post" enctype="multipart/form-data">
+        <label for="csv-file" class="form-label">CSVファイル</label>
+        <input id="csv-file" name="file" type="file" class="form-control" accept=".csv,text/csv"
+               aria-describedby="csv-help" required>
+        <p id="csv-help" class="form-text mb-3">UTF-8のCSVを選択してください。上限は256 KB・500件です。親タスクも同じファイルに含めてください。</p>
+        <div class="d-flex flex-wrap gap-2">
+            <button type="submit" class="btn btn-primary">プレビュー</button>
+            <a class="btn btn-outline-primary" th:href="@{/todo/import/template.csv}">CSVテンプレートをダウンロード</a>
+        </div>
+    </form>
+
+    <div class="alert alert-danger" role="alert" th:if="${errors != null and !errors.isEmpty()}">
+        <p class="fw-semibold mb-1">CSVを登録できません</p>
+        <ul class="mb-0">
+            <li th:each="issue : ${errors}">
+                <strong th:if="${issue.line() > 0}" th:text="|${issue.line()}行目|">行番号</strong>
+                <span th:text="${issue.reason()}">理由</span>
+            </li>
+        </ul>
+    </div>
+
+    <div class="alert alert-warning" th:if="${warnings != null and !warnings.isEmpty()}">
+        <p class="fw-semibold mb-1">入力内容を確認してください</p>
+        <ul class="mb-0">
+            <li th:each="issue : ${warnings}">
+                <strong th:text="|${issue.line()}行目|">行番号</strong>
+                <span th:text="${issue.reason()}">理由</span>
+            </li>
+        </ul>
+    </div>
+
+    <section th:if="${rowCount != null}" aria-labelledby="preview-heading">
+        <h2 class="h4" id="preview-heading" th:text="|プレビュー（${rowCount}件）|">プレビュー</h2>
+        <div class="table-responsive mb-3" th:if="${!rows.isEmpty()}">
+            <table class="table table-sm table-bordered bg-white align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col">行番号</th>
+                        <th scope="col" th:each="header : ${headers}" th:text="${header}">列名</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="row : ${rows}">
+                        <th scope="row" th:text="${row.line()}">2</th>
+                        <td th:each="cell : ${row.cells()}" style="white-space: pre-wrap; overflow-wrap: anywhere" th:text="${cell}"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <form th:if="${confirmationId != null}" th:action="@{/todo/import/confirm}" method="post">
+            <input type="hidden" name="confirmationId" th:value="${confirmationId}">
+            <p class="form-text">確認IDの有効期限は15分です。表示順を指定した行は同じ階層内で昇順になり、空欄の行はその後にCSVの行順で追加されます。</p>
+            <button type="submit" class="btn btn-success" th:text="|${rowCount}件を新規登録する|">登録を確定する</button>
+        </form>
+    </section>
+</main>
+</body>
+</html>
