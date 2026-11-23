@@ -2,6 +2,7 @@ package com.example.demo.service;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -22,6 +23,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class TodoService {
+	public static final int LIST_PAGE_SIZE = 10;
+
+	public record ListPage(int page, String keyword, TodoStatus status, Long categoryId, Long assigneeId) {}
+
+	public record DeleteTarget(Long id, String title, Long parentId, String parentTitle, long childCount) {}
 
 	private final TodoMapper todoMapper;
 	private final CategoryMapper categoryMapper;
@@ -130,6 +136,83 @@ public class TodoService {
 		return todoMapper.updateStatus(id, status) > 0;
 	}
 
+	@Transactional
+	public int updateSelectedStatus(List<Long> ids, ListPage page, TodoStatus status) {
+		if (status == null) {
+			throw new IllegalArgumentException("変更後のステータスを選択してください。");
+		}
+		SortedSet<Long> selectedIds = validateSelection(ids, page);
+		lockTasks(selectedIds);
+		findSelectedTasks(selectedIds, page);
+		for (Long id : selectedIds) {
+			if (!updateStatus(id, status)) {
+				throw new IllegalStateException("ステータスを変更できないタスクがあります。");
+			}
+		}
+		return selectedIds.size();
+	}
+
+	@Transactional(readOnly = true)
+	public List<DeleteTarget> previewSelectedDeletion(List<Long> ids, ListPage page) {
+		return prepareDeletion(findSelectedTasks(validateSelection(ids, page), page));
+	}
+
+	@Transactional
+	public int deleteSelected(List<DeleteTarget> confirmed, ListPage page) {
+		SortedSet<Long> selectedIds = validateSelection(confirmed.stream().map(DeleteTarget::id).toList(), page);
+		lockTasks(selectedIds);
+		List<DeleteTarget> current = prepareDeletion(findSelectedTasks(selectedIds, page));
+		if (!confirmed.equals(current)) {
+			throw new IllegalArgumentException("確認後に削除対象の名前や親子関係が変わりました。選択し直してください。");
+		}
+		for (DeleteTarget target : current) {
+			if (deleteWithoutChildren(target.id()) != 1) {
+				throw new IllegalStateException("削除できないタスクがあります。");
+			}
+		}
+		return current.size();
+	}
+
+	private SortedSet<Long> validateSelection(List<Long> ids, ListPage page) {
+		if (ids == null || ids.isEmpty()) {
+			throw new IllegalArgumentException("タスクを1件以上選択してください。");
+		}
+		if (page.page() < 1 || ids.size() > LIST_PAGE_SIZE || ids.stream().anyMatch(id -> id == null || id < 1)) {
+			throw new IllegalArgumentException("このページで選択したタスクを確認してください。");
+		}
+		SortedSet<Long> selectedIds = new TreeSet<>(ids);
+		if (selectedIds.size() != ids.size()) {
+			throw new IllegalArgumentException("同じタスクが複数回指定されています。");
+		}
+		return selectedIds;
+	}
+
+	private List<Todo> findSelectedTasks(Set<Long> ids, ListPage page) {
+		List<Todo> selected = findPage(page.keyword(), page.status(), page.categoryId(), page.assigneeId(),
+				LIST_PAGE_SIZE, (page.page() - 1L) * LIST_PAGE_SIZE).stream()
+				.filter(todo -> ids.contains(todo.getId()))
+				.toList();
+		if (selected.size() != ids.size()) {
+			throw new IllegalArgumentException("現在のページにないタスクが含まれています。選択し直してください。");
+		}
+		return selected;
+	}
+
+	private List<DeleteTarget> prepareDeletion(List<Todo> selected) {
+		for (Todo todo : selected) {
+			long selectedChildren = selected.stream().filter(child -> todo.getId().equals(child.getParentId())).count();
+			if (selectedChildren != todo.getChildCount()) {
+				throw new IllegalArgumentException("「" + todo.getTitle() + "」に選択されていない子タスクが残っています。");
+			}
+		}
+		return selected.stream()
+				.map(todo -> new DeleteTarget(todo.getId(), todo.getTitle(), todo.getParentId(), todo.getParentTitle(),
+						todo.getChildCount()))
+				.sorted(Comparator.comparing((DeleteTarget target) -> target.parentId() == null)
+						.thenComparing(DeleteTarget::id))
+				.toList();
+	}
+
 	public static LocalDate parseDate(String value, String label) {
 		if (value == null || value.isEmpty()) {
 			return null;
@@ -160,6 +243,10 @@ public class TodoService {
 		if (todoMapper.lockById(id) == null) {
 			return 0;
 		}
+		return deleteWithoutChildren(id);
+	}
+
+	private int deleteWithoutChildren(Long id) {
 		if (todoMapper.hasChildren(id)) {
 			throw new IllegalArgumentException("子タスクが残っているため、この親タスクは削除できません。");
 		}

@@ -109,7 +109,9 @@
         .todo-actions .btn { white-space: nowrap; }
         .todo-toggle-children { font-size: .8125rem; }
 
-        .todo-row[draggable="true"] { cursor: grab; }
+        .todo-drag-handle { cursor: grab; user-select: none; flex: none; }
+        .todo-drag-handle:active { cursor: grabbing; }
+        .todo-select { flex: none; cursor: pointer; }
         .todo-row.is-dragging { opacity: 0.45; }
         .todo-row.is-drop-before { box-shadow: inset 0 3px 0 var(--bs-primary); }
         .todo-row.is-drop-after { box-shadow: inset 0 -3px 0 var(--bs-primary); }
@@ -237,12 +239,34 @@
     </p>
 
     <p th:if="${!hasSearchCondition and not #lists.isEmpty(todos)}" class="text-muted small">
-        ドラッグ＆ドロップで、このページ内の大作業・独立タスク同士、または同じ親の子タスク同士を並べ替えできます。
+        「⠿」をドラッグして、このページ内の大作業・独立タスク同士、または同じ親の子タスク同士を並べ替えできます。
     </p>
     <p th:if="${hasSearchCondition}" class="text-muted small">
         検索または絞り込み中は、並び替えできません。
     </p>
     <div id="reorder-message" class="small mb-2" role="status" aria-live="polite"></div>
+
+    <form id="bulk-actions" class="card card-body shadow-sm mb-3" th:if="${not #lists.isEmpty(todos)}"
+          th:action="@{/todo/bulk/status}" method="post" aria-labelledby="bulk-heading">
+        <input type="hidden" name="page" th:value="${currentPage}">
+        <input type="hidden" name="keyword" th:value="${keyword}">
+        <input type="hidden" name="status" th:value="${status}">
+        <input type="hidden" name="categoryId" th:value="${categoryId}">
+        <input type="hidden" name="assigneeId" th:value="${assigneeId}">
+        <h2 class="h6 mb-1" id="bulk-heading">一括操作</h2>
+        <p class="small text-body-secondary mb-2">このページに表示されているタスクを選択できます。ページ移動・絞り込み・並べ替えで選択は解除されます。</p>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <span id="bulk-count" class="fw-semibold" role="status">選択中 0件</span>
+            <label class="visually-hidden" for="bulk-status">変更後のステータス</label>
+            <select id="bulk-status" class="form-select form-select-sm w-auto" name="newStatus" disabled>
+                <option value="">ステータスを選択</option>
+                <option th:each="option : ${statusOptions}" th:value="${option.name()}" th:text="${option.label}">未着手</option>
+            </select>
+            <button id="bulk-update" type="submit" class="btn btn-outline-primary btn-sm" disabled>一括変更</button>
+            <button id="bulk-delete" type="submit" class="btn btn-outline-danger btn-sm"
+                    th:attr="formaction=@{/todo/bulk/delete/preview}" disabled>一括削除の確認</button>
+        </div>
+    </form>
 
     <div class="card shadow-sm" th:if="${not #lists.isEmpty(todos)}">
         <div class="table-responsive">
@@ -265,11 +289,14 @@
                        th:attr="data-page=${currentPage},data-reorder-enabled=${!hasSearchCondition},data-reorder-url=@{/api/todo/reorder}">
                 <tr th:each="todo : ${todos}" th:with="completed=${todo.status.completed}"
                     class="todo-row" role="row" th:attr="data-todo-id=${todo.id},data-parent-id=${todo.parentId}"
-                    th:classappend="${todo.parentId != null ? 'todo-row--child' : (todo.childCount > 0 ? 'todo-row--parent' : '')}"
-                    th:draggable="${!hasSearchCondition}">
+                    th:classappend="${todo.parentId != null ? 'todo-row--child' : (todo.childCount > 0 ? 'todo-row--parent' : '')}">
                     <td class="todo-task-cell" role="cell">
                         <div class="todo-task-content">
                             <div class="todo-task-heading">
+                                <input type="checkbox" name="ids" class="form-check-input todo-select" form="bulk-actions"
+                                       th:value="${todo.id}" th:aria-label="|${todo.title}を一括操作に選択|" autocomplete="off">
+                                <span class="todo-drag-handle text-secondary" th:if="${!hasSearchCondition}"
+                                      draggable="true" title="ドラッグして並べ替え" aria-hidden="true">⠿</span>
                                 <span class="todo-task-number" th:text="${displayNumbers[todo.id]}">1-1</span>
                                 <span class="todo-title"
                                       th:classappend="${completed} ? 'text-decoration-line-through text-body-secondary' : ''"
@@ -407,35 +434,73 @@
     const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content;
 
     const todoRows = Array.from(document.querySelectorAll('#todo-list .todo-row'));
+    const bulkForm = document.getElementById('bulk-actions');
+    const bulkCount = document.getElementById('bulk-count');
+    const bulkStatus = document.getElementById('bulk-status');
+    const bulkUpdate = document.getElementById('bulk-update');
+    const bulkDelete = document.getElementById('bulk-delete');
+    const selectionBoxes = Array.from(document.querySelectorAll('#todo-list .todo-select'));
+    let draggingRow;
+    let isSavingOrder = false;
+
+    function refreshBulkActions() {
+        if (!bulkForm) {
+            return;
+        }
+        const selected = selectionBoxes.filter((checkbox) => checkbox.checked && !checkbox.disabled).length;
+        const disabled = selected === 0 || isSavingOrder || Boolean(draggingRow);
+        bulkCount.textContent = `選択中 ${selected}件`;
+        bulkStatus.disabled = disabled;
+        bulkUpdate.disabled = disabled || !bulkStatus.value;
+        bulkDelete.disabled = disabled;
+    }
+
+    selectionBoxes.forEach((checkbox) => checkbox.addEventListener('change', refreshBulkActions));
+    bulkStatus?.addEventListener('change', refreshBulkActions);
+    bulkForm?.addEventListener('submit', (event) => {
+        if (event.submitter === bulkDelete ? bulkDelete.disabled : bulkUpdate.disabled) {
+            event.preventDefault();
+        }
+    });
+    window.addEventListener('pageshow', () => {
+        selectionBoxes.forEach((checkbox) => { checkbox.checked = false; });
+        refreshBulkActions();
+    });
+
     document.querySelectorAll('[data-toggle-children]').forEach((button) => {
         button.addEventListener('click', () => {
             const expanded = button.getAttribute('aria-expanded') === 'true';
             todoRows.filter((row) => row.dataset.parentId === button.dataset.toggleChildren)
-                .forEach((row) => { row.hidden = expanded; });
+                .forEach((row) => {
+                    row.hidden = expanded;
+                    const checkbox = row.querySelector('.todo-select');
+                    checkbox.checked = false;
+                    checkbox.disabled = expanded;
+                });
             button.setAttribute('aria-expanded', String(!expanded));
             button.textContent = expanded ? '子を開く' : '子を閉じる';
+            refreshBulkActions();
         });
     });
 
     if (todoList?.dataset.reorderEnabled === 'true') {
-        let draggingRow;
-        let isSaving = false;
-
         const clearDropIndicators = () => todoRows.forEach((row) => {
             row.classList.remove('is-drop-before', 'is-drop-after');
         });
-        const canDropOn = (row) => !isSaving && draggingRow && draggingRow !== row
+        const canDropOn = (row) => !isSavingOrder && draggingRow && draggingRow !== row
             && draggingRow.dataset.parentId === row.dataset.parentId;
         const isAfter = (row, event) => event.clientY > row.getBoundingClientRect().top + row.offsetHeight / 2;
 
         todoRows.forEach((row) => {
-            row.addEventListener('dragstart', (event) => {
-                if (isSaving) {
+            const handle = row.querySelector('.todo-drag-handle');
+            handle?.addEventListener('dragstart', (event) => {
+                if (isSavingOrder) {
                     event.preventDefault();
                     return;
                 }
                 draggingRow = row;
                 row.classList.add('is-dragging');
+                refreshBulkActions();
                 event.dataTransfer.effectAllowed = 'move';
                 event.dataTransfer.setData('text/plain', row.dataset.todoId);
             });
@@ -467,17 +532,19 @@
                 }
             });
 
-            row.addEventListener('dragend', () => {
+            handle?.addEventListener('dragend', () => {
                 if (draggingRow) {
                     draggingRow.classList.remove('is-dragging');
                 }
                 clearDropIndicators();
                 draggingRow = undefined;
+                refreshBulkActions();
             });
         });
 
         async function saveOrder(parentId, reordered) {
-            isSaving = true;
+            isSavingOrder = true;
+            refreshBulkActions();
             todoList.classList.add('is-saving');
             reorderMessage.textContent = '並び順を保存しています…';
             reorderMessage.className = 'small mb-2 text-muted';
@@ -506,8 +573,9 @@
                 reorderMessage.textContent = '並び順を保存できませんでした。ページを更新してからやり直してください。';
                 reorderMessage.className = 'small mb-2 text-danger';
             } finally {
-                isSaving = false;
+                isSavingOrder = false;
                 todoList.classList.remove('is-saving');
+                refreshBulkActions();
             }
         }
     }

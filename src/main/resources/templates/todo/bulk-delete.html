@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ToDo 一括削除の確認</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
+          crossorigin="anonymous">
+</head>
+<body class="bg-light">
+<main class="container py-5">
+    <div class="card shadow-sm">
+        <div class="card-body p-4">
+            <h1 class="h3 mb-3">一括削除の確認</h1>
+            <p th:text="|次の${targets.size()}件を削除します。削除後は元に戻せません。|">対象件数を確認してください。</p>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <thead>
+                    <tr><th scope="col">タスク名</th><th scope="col">親子関係</th></tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="target : ${targets}">
+                        <th scope="row" class="text-break" th:text="${target.title()}">タスク名</th>
+                        <td class="text-break">
+                            <span th:if="${target.parentId() != null}" th:text="|子タスク（親：${target.parentTitle()}）|">子タスク</span>
+                            <span th:if="${target.childCount() > 0}" th:text="|親タスク（子${target.childCount()}件を含む）|">親タスク</span>
+                            <span th:if="${target.parentId() == null and target.childCount() == 0}">独立タスク</span>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="small text-body-secondary">この確認は15分間有効です。</p>
+            <form th:action="@{/todo/bulk/delete/confirm}" method="post" class="d-flex flex-wrap gap-2">
+                <input type="hidden" name="confirmationId" th:value="${confirmationId}">
+                <button class="btn btn-danger" type="submit" th:text="|${targets.size()}件を削除する|">削除する</button>
+                <a class="btn btn-outline-secondary"
+                   th:href="@{/todo(page=${returnTo.page()}, keyword=${returnTo.keyword()}, status=${returnTo.status()}, categoryId=${returnTo.categoryId()}, assigneeId=${returnTo.assigneeId()})}">一覧に戻る</a>
+            </form>
+        </div>
+    </div>
+</main>
+</body>
+</html>

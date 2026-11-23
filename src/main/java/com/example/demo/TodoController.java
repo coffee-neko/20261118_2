@@ -35,13 +35,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import static com.example.demo.service.TodoService.LIST_PAGE_SIZE;
 import static com.example.demo.service.TodoService.parseDate;
 
 @Controller
 @RequestMapping("/todo")
 public class TodoController {
 
-	private static final int PAGE_SIZE = 10;
 	private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Tokyo");
 	private static final String STATUS_ALL = "all";
 
@@ -61,14 +61,14 @@ public class TodoController {
 		TodoStatus selectedStatus = findStatus(status);
 		long totalCount = todoService.countByCondition(keyword, selectedStatus, categoryId, assigneeId);
 		TodoProgress progress = todoService.findQuestProgress();
-		int totalPages = (int) Math.ceil((double) totalCount / PAGE_SIZE);
+		int totalPages = (int) Math.ceil((double) totalCount / LIST_PAGE_SIZE);
 		int currentPage = totalPages == 0 ? 1 : Math.min(Math.max(page, 1), totalPages);
 
-		long offset = (currentPage - 1L) * PAGE_SIZE;
+		long offset = (currentPage - 1L) * LIST_PAGE_SIZE;
 		long startItem = totalCount == 0 ? 0 : offset + 1L;
-		long endItem = Math.min(offset + PAGE_SIZE, totalCount);
+		long endItem = Math.min(offset + LIST_PAGE_SIZE, totalCount);
 
-		List<Todo> todos = todoService.findPage(keyword, selectedStatus, categoryId, assigneeId, PAGE_SIZE, offset);
+		List<Todo> todos = todoService.findPage(keyword, selectedStatus, categoryId, assigneeId, LIST_PAGE_SIZE, offset);
 		model.addAttribute("todos", todos);
 		if (!todos.isEmpty()) {
 			model.addAttribute("displayNumbers", buildDisplayNumbers(todoService.findAll()));
@@ -329,7 +329,7 @@ public class TodoController {
 		}
 	}
 
-	private TodoStatus findStatus(String value) {
+	static TodoStatus findStatus(String value) {
 		for (TodoStatus status : TodoStatus.values()) {
 			if (status.name().equals(value)) {
 				return status;
@@ -338,7 +338,7 @@ public class TodoController {
 		return null;
 	}
 
-	private TodoStatus requireStatus(String value) {
+	static TodoStatus requireStatus(String value) {
 		TodoStatus status = findStatus(value);
 		if (status == null) {
 			throw new IllegalArgumentException("状態を未着手・進行中・完了から選択してください。");
