@@ -21,6 +21,9 @@ public interface TodoMapper {
 	List<Todo> findPage(@Param("keyword") String keyword, @Param("status") TodoStatus status,
 			@Param("categoryId") Long categoryId, @Param("assigneeId") Long assigneeId,
 			@Param("limit") int limit, @Param("offset") long offset);
+	List<Todo> findPageByDueDate(@Param("keyword") String keyword, @Param("status") TodoStatus status,
+			@Param("categoryId") Long categoryId, @Param("assigneeId") Long assigneeId,
+			@Param("limit") int limit, @Param("offset") long offset);
 
 	long countByCondition(@Param("keyword") String keyword, @Param("status") TodoStatus status,
 			@Param("categoryId") Long categoryId, @Param("assigneeId") Long assigneeId);

@@ -37,7 +37,7 @@
                 <input type="hidden" name="confirmationId" th:value="${confirmationId}">
                 <button class="btn btn-danger" type="submit" th:text="|${targets.size()}件を削除する|">削除する</button>
                 <a class="btn btn-outline-secondary"
-                   th:href="@{/todo(page=${returnTo.page()}, keyword=${returnTo.keyword()}, status=${returnTo.status()}, categoryId=${returnTo.categoryId()}, assigneeId=${returnTo.assigneeId()})}">一覧に戻る</a>
+                   th:href="@{/todo(page=${returnTo.page()}, keyword=${returnTo.keyword()}, status=${returnTo.status()}, categoryId=${returnTo.categoryId()}, assigneeId=${returnTo.assigneeId()}, sort=${returnTo.sort()})}">一覧に戻る</a>
             </form>
         </div>
     </div>

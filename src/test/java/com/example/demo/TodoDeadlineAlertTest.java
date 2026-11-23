@@ -8,6 +8,7 @@ import com.example.demo.model.Todo;
 import com.example.demo.model.TodoProgress;
 import com.example.demo.model.TodoStatus;
 import com.example.demo.service.TodoService;
+import com.example.demo.service.TodoService.ListPage;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.Test;
@@ -62,7 +63,7 @@ class TodoDeadlineAlertTest {
 				task(9, null, TodoStatus.NOT_STARTED));
 		when(todoService.countByCondition("", null, null, null)).thenReturn((long) tasks.size());
 		when(todoService.findQuestProgress()).thenReturn(new TodoProgress(8, 3));
-		when(todoService.findPage("", null, null, null, TodoService.LIST_PAGE_SIZE, 0L)).thenReturn(tasks);
+		when(todoService.findPage(new ListPage(1, "", null, null, null, false))).thenReturn(tasks);
 		when(todoService.findAll()).thenReturn(tasks);
 
 		String html = mockMvc.perform(get("/todo")).andExpect(status().isOk())

@@ -20,6 +20,7 @@ import com.example.demo.model.Todo;
 import com.example.demo.model.TodoProgress;
 import com.example.demo.model.TodoStatus;
 import com.example.demo.service.TodoService;
+import com.example.demo.service.TodoService.ListPage;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -45,6 +46,7 @@ import static com.example.demo.service.TodoService.parseDate;
 @RequestMapping("/todo")
 public class TodoController {
 
+	static final String SORT_DUE_DATE = "due";
 	private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Tokyo");
 	private static final String STATUS_ALL = "all";
 
@@ -60,8 +62,11 @@ public class TodoController {
 			@RequestParam(defaultValue = "") String keyword,
 			@RequestParam(defaultValue = STATUS_ALL) String status,
 			@RequestParam(required = false) Long categoryId,
-			@RequestParam(required = false) Long assigneeId, Model model) {
+			@RequestParam(required = false) Long assigneeId,
+			@RequestParam(defaultValue = "normal") String sort, Model model) {
 		TodoStatus selectedStatus = findStatus(status);
+		boolean dueDateOrder = SORT_DUE_DATE.equals(sort);
+		boolean hasSearchCondition = !keyword.isEmpty() || selectedStatus != null || categoryId != null || assigneeId != null;
 		long totalCount = todoService.countByCondition(keyword, selectedStatus, categoryId, assigneeId);
 		TodoProgress progress = todoService.findQuestProgress();
 		int totalPages = (int) Math.ceil((double) totalCount / LIST_PAGE_SIZE);
@@ -71,7 +76,8 @@ public class TodoController {
 		long startItem = totalCount == 0 ? 0 : offset + 1L;
 		long endItem = Math.min(offset + LIST_PAGE_SIZE, totalCount);
 
-		List<Todo> todos = todoService.findPage(keyword, selectedStatus, categoryId, assigneeId, LIST_PAGE_SIZE, offset);
+		List<Todo> todos = todoService.findPage(new ListPage(currentPage, keyword, selectedStatus, categoryId, assigneeId,
+				dueDateOrder));
 		model.addAttribute("todos", todos);
 		if (!todos.isEmpty()) {
 			model.addAttribute("displayNumbers", buildDisplayNumbers(todoService.findAll()));
@@ -86,8 +92,9 @@ public class TodoController {
 		model.addAttribute("categoryId", categoryId);
 		model.addAttribute("assignees", todoService.findAllAssignees());
 		model.addAttribute("assigneeId", assigneeId);
-		model.addAttribute("hasSearchCondition",
-				!keyword.isEmpty() || selectedStatus != null || categoryId != null || assigneeId != null);
+		model.addAttribute("hasSearchCondition", hasSearchCondition);
+		model.addAttribute("sort", dueDateOrder ? SORT_DUE_DATE : "normal");
+		model.addAttribute("reorderEnabled", !hasSearchCondition && !dueDateOrder);
 		model.addAttribute("currentPage", currentPage);
 		model.addAttribute("totalPages", totalPages);
 		model.addAttribute("totalCount", totalCount);

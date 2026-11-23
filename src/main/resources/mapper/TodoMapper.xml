@@ -119,6 +119,16 @@
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
+    <select id="findPageByDueDate" resultMap="todoResultMap">
+        <include refid="todosWithChildProgress"/>
+        <include refid="searchConditions"/>
+        ORDER BY MIN(t.due_date) OVER (PARTITION BY COALESCE(t.parent_id, t.id)) ASC NULLS LAST,
+                 COALESCE(p.display_order, t.display_order), COALESCE(t.parent_id, t.id),
+                 CASE WHEN t.parent_id IS NULL THEN 0 ELSE 1 END,
+                 t.due_date ASC NULLS LAST, t.display_order, t.id
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
     <select id="countByCondition" resultType="long">
         SELECT COUNT(*)
         FROM todos t

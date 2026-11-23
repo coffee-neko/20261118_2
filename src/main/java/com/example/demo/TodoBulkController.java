@@ -23,6 +23,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import static com.example.demo.TodoController.SORT_DUE_DATE;
+
 @Controller
 @RequestMapping("/todo/bulk")
 public class TodoBulkController {
@@ -30,13 +32,15 @@ public class TodoBulkController {
 	private static final String PENDING_DELETION = TodoBulkController.class.getName() + ".pendingDeletion";
 	private static final Duration CONFIRMATION_LIFETIME = Duration.ofMinutes(15);
 
-	public record ListParameters(Integer page, String keyword, String status, Long categoryId, Long assigneeId) {
+	public record ListParameters(Integer page, String keyword, String status, Long categoryId, Long assigneeId, String sort) {
 		public ListParameters {
 			page = page == null ? 1 : page;
+			sort = SORT_DUE_DATE.equals(sort) ? SORT_DUE_DATE : null;
 		}
 
 		ListPage toListPage() {
-			return new ListPage(page, keyword, TodoController.findStatus(status), categoryId, assigneeId);
+			return new ListPage(page, keyword, TodoController.findStatus(status), categoryId, assigneeId,
+					SORT_DUE_DATE.equals(sort));
 		}
 	}
 
@@ -143,6 +147,9 @@ public class TodoBulkController {
 		}
 		if (returnTo.assigneeId() != null) {
 			attributes.addAttribute("assigneeId", returnTo.assigneeId());
+		}
+		if (returnTo.sort() != null) {
+			attributes.addAttribute("sort", returnTo.sort());
 		}
 		return "redirect:/todo";
 	}

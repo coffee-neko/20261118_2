@@ -213,9 +213,16 @@
                             th:text="${assignee.name}">たろう</option>
                 </select>
             </div>
-            <div class="col-md-auto d-flex gap-2">
-                <button type="submit" class="btn btn-primary">検索</button>
-                <a class="btn btn-outline-secondary" th:href="@{/todo}">条件をクリア</a>
+            <div class="col-12 d-flex flex-wrap align-items-end gap-2">
+                <div>
+                    <label for="sort" class="form-label">表示順</label>
+                    <select id="sort" name="sort" class="form-select">
+                        <option value="normal" th:selected="${sort == 'normal'}">通常順</option>
+                        <option value="due" th:selected="${sort == 'due'}">期限が近い順</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">適用</button>
+                <a class="btn btn-outline-secondary" th:href="@{/todo(sort=${sort})}">条件をクリア</a>
             </div>
         </div>
     </form>
@@ -240,10 +247,13 @@
         全0件中 0～0件
     </p>
 
-    <p th:if="${!hasSearchCondition and not #lists.isEmpty(todos)}" class="text-muted small">
+    <p th:if="${reorderEnabled and not #lists.isEmpty(todos)}" class="text-muted small">
         「⠿」をドラッグして、このページ内の大作業・独立タスク同士、または同じ親の子タスク同士を並べ替えできます。
     </p>
-    <p th:if="${hasSearchCondition}" class="text-muted small">
+    <p th:if="${sort == 'due'}" class="text-muted small">
+        親子は、表示条件に一致するタスクの中で最も早い期限で並びます。期限順ではドラッグできません。
+    </p>
+    <p th:if="${sort != 'due' and hasSearchCondition}" class="text-muted small">
         検索または絞り込み中は、並び替えできません。
     </p>
     <div id="reorder-message" class="small mb-2" role="status" aria-live="polite"></div>
@@ -251,6 +261,7 @@
     <form id="bulk-actions" class="card card-body shadow-sm mb-3" th:if="${not #lists.isEmpty(todos)}"
           th:action="@{/todo/bulk/status}" method="post" aria-labelledby="bulk-heading">
         <input type="hidden" name="page" th:value="${currentPage}">
+        <input type="hidden" name="sort" th:value="${sort}">
         <input type="hidden" name="keyword" th:value="${keyword}">
         <input type="hidden" name="status" th:value="${status}">
         <input type="hidden" name="categoryId" th:value="${categoryId}">
@@ -288,7 +299,7 @@
                 </tr>
                 </thead>
                 <tbody id="todo-list" role="rowgroup"
-                       th:attr="data-page=${currentPage},data-reorder-enabled=${!hasSearchCondition},data-reorder-url=@{/api/todo/reorder}">
+                       th:attr="data-page=${currentPage},data-reorder-enabled=${reorderEnabled},data-reorder-url=@{/api/todo/reorder}">
                 <tr th:each="todo : ${todos}" th:with="completed=${todo.status.completed}"
                     class="todo-row" role="row" th:attr="data-todo-id=${todo.id},data-parent-id=${todo.parentId}"
                     th:classappend="${todo.parentId != null ? 'todo-row--child' : (todo.childCount > 0 ? 'todo-row--parent' : '')}">
@@ -297,7 +308,7 @@
                             <div class="todo-task-heading">
                                 <input type="checkbox" name="ids" class="form-check-input todo-select" form="bulk-actions"
                                        th:value="${todo.id}" th:aria-label="|${todo.title}を一括操作に選択|" autocomplete="off">
-                                <span class="todo-drag-handle text-secondary" th:if="${!hasSearchCondition}"
+                                <span class="todo-drag-handle text-secondary" th:if="${reorderEnabled}"
                                       draggable="true" title="ドラッグして並べ替え" aria-hidden="true">⠿</span>
                                 <span class="todo-task-number" th:text="${displayNumbers[todo.id]}">1-1</span>
                                 <span class="todo-title"
@@ -389,17 +400,17 @@
         <ul class="pagination justify-content-center mb-0">
             <li class="page-item" th:classappend="${currentPage == 1} ? ' disabled'">
                 <a class="page-link" th:if="${currentPage > 1}"
-                   th:href="@{/todo(page=${currentPage - 1}, keyword=${keyword}, status=${status}, categoryId=${categoryId}, assigneeId=${assigneeId})}">前へ</a>
+                   th:href="@{/todo(page=${currentPage - 1}, keyword=${keyword}, status=${status}, categoryId=${categoryId}, assigneeId=${assigneeId}, sort=${sort})}">前へ</a>
                 <span class="page-link" th:unless="${currentPage > 1}">前へ</span>
             </li>
             <li class="page-item" th:each="pageNumber : ${#numbers.sequence(1, totalPages)}"
                 th:classappend="${pageNumber == currentPage} ? ' active'">
-                <a class="page-link" th:href="@{/todo(page=${pageNumber}, keyword=${keyword}, status=${status}, categoryId=${categoryId}, assigneeId=${assigneeId})}"
+                <a class="page-link" th:href="@{/todo(page=${pageNumber}, keyword=${keyword}, status=${status}, categoryId=${categoryId}, assigneeId=${assigneeId}, sort=${sort})}"
                    th:text="${pageNumber}">1</a>
             </li>
             <li class="page-item" th:classappend="${currentPage == totalPages} ? ' disabled'">
                 <a class="page-link" th:if="${currentPage < totalPages}"
-                   th:href="@{/todo(page=${currentPage + 1}, keyword=${keyword}, status=${status}, categoryId=${categoryId}, assigneeId=${assigneeId})}">次へ</a>
+                   th:href="@{/todo(page=${currentPage + 1}, keyword=${keyword}, status=${status}, categoryId=${categoryId}, assigneeId=${assigneeId}, sort=${sort})}">次へ</a>
                 <span class="page-link" th:unless="${currentPage < totalPages}">次へ</span>
             </li>
         </ul>

@@ -27,7 +27,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class TodoService {
 	public static final int LIST_PAGE_SIZE = 10;
 
-	public record ListPage(int page, String keyword, TodoStatus status, Long categoryId, Long assigneeId) {}
+	public record ListPage(int page, String keyword, TodoStatus status, Long categoryId, Long assigneeId,
+			boolean dueDateOrder) {}
 
 	public record DeleteTarget(Long id, String title, Long parentId, String parentTitle, long childCount) {}
 
@@ -69,8 +70,14 @@ public class TodoService {
 		return todoMapper.findForExport(keyword, status, categoryId, assigneeId);
 	}
 
-	public List<Todo> findPage(String keyword, TodoStatus status, Long categoryId, Long assigneeId, int limit, long offset) {
-		return todoMapper.findPage(keyword, status, categoryId, assigneeId, limit, offset);
+	public List<Todo> findPage(ListPage page) {
+		long offset = (page.page() - 1L) * LIST_PAGE_SIZE;
+		if (page.dueDateOrder()) {
+			return todoMapper.findPageByDueDate(page.keyword(), page.status(), page.categoryId(), page.assigneeId(),
+					LIST_PAGE_SIZE, offset);
+		}
+		return todoMapper.findPage(page.keyword(), page.status(), page.categoryId(), page.assigneeId(),
+				LIST_PAGE_SIZE, offset);
 	}
 
 	public long countByCondition(String keyword, TodoStatus status, Long categoryId, Long assigneeId) {
@@ -198,8 +205,7 @@ public class TodoService {
 	}
 
 	private List<Todo> findSelectedTasks(Set<Long> ids, ListPage page) {
-		List<Todo> selected = findPage(page.keyword(), page.status(), page.categoryId(), page.assigneeId(),
-				LIST_PAGE_SIZE, (page.page() - 1L) * LIST_PAGE_SIZE).stream()
+		List<Todo> selected = findPage(page).stream()
 				.filter(todo -> ids.contains(todo.getId()))
 				.toList();
 		if (selected.size() != ids.size()) {
