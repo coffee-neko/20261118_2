@@ -80,3 +80,32 @@
     outline: 2px solid var(--quest-focus);
     outline-offset: 2px;
 }
+
+.command-room .command-link {
+    display: grid;
+    grid-template-columns: 1.25em minmax(0, 1fr);
+    align-items: baseline;
+    gap: .35rem;
+    padding: .5rem .5rem .5rem .25rem;
+    border-radius: .25rem;
+    color: var(--quest-link);
+    overflow-wrap: anywhere;
+}
+
+.command-room .command-cursor {
+    color: var(--quest-text);
+    visibility: hidden;
+}
+
+.command-room .command-link:is(:hover, :focus-visible) {
+    background-color: var(--quest-background);
+    color: var(--quest-text);
+}
+
+.command-room .command-link:is(:hover, :focus-visible) .command-cursor {
+    visibility: visible;
+}
+
+.command-room .command-section-target {
+    scroll-margin-block-start: 1rem;
+}
