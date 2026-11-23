@@ -16,9 +16,11 @@ import com.example.demo.mapper.TodoMapper;
 import com.example.demo.model.Assignee;
 import com.example.demo.model.Category;
 import com.example.demo.model.Todo;
+import com.example.demo.model.TodoDashboard;
 import com.example.demo.model.TodoProgress;
 import com.example.demo.model.TodoStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -77,6 +79,14 @@ public class TodoService {
 
 	public TodoProgress findQuestProgress() {
 		return todoMapper.findQuestProgress();
+	}
+
+	@Transactional(readOnly = true, isolation = Isolation.SERIALIZABLE)
+	public TodoDashboard loadDashboard(LocalDate today) {
+		LocalDate lastDay = today.plusDays(6);
+		return new TodoDashboard(today, lastDay, todoMapper.findDashboardSummary(today),
+				todoMapper.findUpcomingTasks(today, lastDay), todoMapper.findDashboardByAssignee(),
+				todoMapper.findDashboardByCategory());
 	}
 
 	public List<Todo> findParentOptions(Long taskId) {

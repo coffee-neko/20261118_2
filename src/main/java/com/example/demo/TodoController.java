@@ -1,6 +1,7 @@
 package com.example.demo;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.ZoneId;
@@ -22,6 +23,7 @@ import com.example.demo.service.TodoService;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -33,6 +35,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import static com.example.demo.service.TodoService.LIST_PAGE_SIZE;
@@ -94,6 +97,17 @@ public class TodoController {
 		model.addAttribute("startItem", startItem);
 		model.addAttribute("endItem", endItem);
 		return "todo/list";
+	}
+
+	@GetMapping("/dashboard")
+	public String dashboard(Model model) {
+		model.addAttribute("dashboard", todoService.loadDashboard(businessDate(Instant.now())));
+		model.addAttribute("statusOptions", TodoStatus.values());
+		return "todo/dashboard";
+	}
+
+	static LocalDate businessDate(Instant instant) {
+		return LocalDate.ofInstant(instant, BUSINESS_ZONE);
 	}
 
 	@GetMapping("/export.csv")
@@ -185,6 +199,16 @@ public class TodoController {
 		model.addAttribute("categories", todoService.findAllCategories());
 		model.addAttribute("assignees", todoService.findAllAssignees());
 		model.addAttribute("parentOptions", todoService.findParentOptions(taskId));
+	}
+
+	@GetMapping("/{id:\\d+}")
+	public String detail(@PathVariable Long id, Model model) {
+		Todo todo = todoService.findById(id);
+		if (todo == null) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "指定したタスクが見つかりません。");
+		}
+		model.addAttribute("todo", todo);
+		return "todo/detail";
 	}
 
 	@GetMapping("/{id}/edit")
