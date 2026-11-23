@@ -4,7 +4,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 public record TodoDashboard(LocalDate today, LocalDate lastDay, Summary summary, List<Todo> upcoming,
-		List<Group> byAssignee, List<Group> byCategory) {
+		List<Todo> withoutDueDate, List<Group> byAssignee, List<Group> byCategory) {
 
 	public record Summary(long total, long notStarted, long inProgress, long completed, long overdue) {
 		public long count(TodoStatus status) {

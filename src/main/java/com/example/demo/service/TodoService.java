@@ -92,8 +92,8 @@ public class TodoService {
 	public TodoDashboard loadDashboard(LocalDate today) {
 		LocalDate lastDay = today.plusDays(6);
 		return new TodoDashboard(today, lastDay, todoMapper.findDashboardSummary(today),
-				todoMapper.findUpcomingTasks(today, lastDay), todoMapper.findDashboardByAssignee(),
-				todoMapper.findDashboardByCategory());
+				todoMapper.findUpcomingTasks(today, lastDay), todoMapper.findIncompleteTasksWithoutDueDate(),
+				todoMapper.findDashboardByAssignee(), todoMapper.findDashboardByCategory());
 	}
 
 	public List<Todo> findParentOptions(Long taskId) {

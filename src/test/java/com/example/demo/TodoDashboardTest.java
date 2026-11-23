@@ -3,6 +3,7 @@ package com.example.demo;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import com.example.demo.model.Todo;
 import com.example.demo.model.TodoDashboard;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -80,11 +82,57 @@ class TodoDashboardTest {
 		assertEquals(new TodoDashboard.Summary(0, 0, 0, 0, 0), dashboard.summary());
 		assertEquals(0, dashboard.summary().percentage());
 		assertTrue(dashboard.upcoming().isEmpty());
+		assertTrue(dashboard.withoutDueDate().isEmpty());
 		assertTrue(dashboard.byAssignee().isEmpty());
 		assertTrue(dashboard.byCategory().isEmpty());
-		mockMvc.perform(get("/todo/dashboard"))
+		String html = mockMvc.perform(get("/todo/dashboard"))
 				.andExpect(status().isOk())
-				.andExpect(content().string(containsString("この期間に期限を迎える未完了タスクはありません。")));
+				.andExpect(content().string(containsString("この期間に期限を迎える未完了タスクはありません。")))
+				.andReturn().getResponse().getContentAsString();
+		String section = withoutDueDateSection(html);
+		assertTrue(section.contains(">0件</p>"));
+		assertTrue(section.contains("期限未設定の未完了タスクはありません。"));
+		assertFalse(section.contains("<table"));
+	}
+
+	@Test
+	void showsOnlyIncompleteChildrenAndIndependentTasksWithoutDueDates() throws Exception {
+		var assignee = todoService.findAllAssignees().get(0);
+		Todo parent = create("期限なしの親", TodoStatus.IN_PROGRESS, null, null, null, null);
+		Todo child = create("期限なしの子", TodoStatus.IN_PROGRESS, null, parent.getId(), null, assignee.getId());
+		Todo independent = create("期限なしの独立タスク", TodoStatus.NOT_STARTED, null, null, null, null);
+		Todo completed = create("期限なしの完了済み", TodoStatus.COMPLETED, null, null, null, null);
+		Todo scheduled = create("期限設定済み", TodoStatus.NOT_STARTED, TODAY, null, null, null);
+
+		TodoDashboard dashboard = todoService.loadDashboard(TODAY);
+		assertEquals(List.of(child.getId(), independent.getId()),
+				dashboard.withoutDueDate().stream().map(Todo::getId).toList());
+		assertEquals(List.of(scheduled.getId()), dashboard.upcoming().stream().map(Todo::getId).toList());
+
+		String html = mockMvc.perform(get("/todo/dashboard")).andExpect(status().isOk())
+				.andReturn().getResponse().getContentAsString();
+		String section = withoutDueDateSection(html);
+		assertTrue(section.contains("期限未設定の未完了タスク"));
+		assertTrue(section.contains(">2件</p>"));
+		assertTrue(section.contains("href=\"/todo/" + child.getId() + "\">" + child.getTitle()));
+		assertTrue(section.contains("href=\"/todo/" + independent.getId() + "\">" + independent.getTitle()));
+		assertTrue(section.contains(">進行中</td>"));
+		assertTrue(section.contains(">未着手</td>"));
+		assertTrue(section.contains(">" + assignee.getName() + "</td>"));
+		assertTrue(section.contains(">未設定</td>"));
+		assertFalse(section.contains(parent.getTitle()));
+		assertFalse(section.contains(completed.getTitle()));
+		assertFalse(section.contains(scheduled.getTitle()));
+		mockMvc.perform(get("/todo/{id}", child.getId()))
+				.andExpect(status().isOk())
+				.andExpect(view().name("todo/detail"));
+
+		assertTrue(todoService.updateStatus(child.getId(), TodoStatus.COMPLETED));
+		String reloaded = mockMvc.perform(get("/todo/dashboard")).andExpect(status().isOk())
+				.andReturn().getResponse().getContentAsString();
+		String reloadedSection = withoutDueDateSection(reloaded);
+		assertTrue(reloadedSection.contains(">1件</p>"));
+		assertFalse(reloadedSection.contains(child.getTitle()));
 	}
 
 	@Test
@@ -108,6 +156,13 @@ class TodoDashboardTest {
 				.andExpect(view().name("todo/detail"))
 				.andExpect(content().string(containsString(upcomingTask.getTitle())));
 		mockMvc.perform(get("/todo/{id}", Long.MAX_VALUE)).andExpect(status().isNotFound());
+	}
+
+	private static String withoutDueDateSection(String html) {
+		var section = Pattern.compile("(?s)<section\\b[^>]*aria-labelledby=\"without-due-date-title\"[^>]*>(.*?)</section>")
+				.matcher(html);
+		assertTrue(section.find(), "期限未設定の未完了タスク欄が表示されていること");
+		return section.group(1);
 	}
 
 	private Todo create(String title, TodoStatus status, LocalDate dueDate, Long parentId, Long categoryId, Long assigneeId) {

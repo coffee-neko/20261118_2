@@ -79,6 +79,27 @@
         </div>
     </section>
 
+    <section class="command-panel rounded p-3 p-md-4 mb-4" aria-labelledby="without-due-date-title"
+             th:with="tasks=${dashboard.withoutDueDate()}">
+        <h2 id="without-due-date-title" class="h4">期限未設定の未完了タスク</h2>
+        <p class="command-note mb-3" th:text="|${tasks.size()}件|">0件</p>
+        <p class="mb-0" th:if="${#lists.isEmpty(tasks)}">期限未設定の未完了タスクはありません。</p>
+        <div class="table-responsive" th:unless="${#lists.isEmpty(tasks)}">
+            <table class="table align-middle mb-0">
+                <thead>
+                <tr><th scope="col">タスク名</th><th scope="col">状態</th><th scope="col">担当者</th></tr>
+                </thead>
+                <tbody>
+                <tr th:each="todo : ${tasks}">
+                    <th scope="row"><a th:href="@{/todo/{id}(id=${todo.id})}" th:text="${todo.title}">タスク名</a></th>
+                    <td class="text-nowrap" th:text="${todo.status.label}">進行中</td>
+                    <td th:text="${todo.assigneeName ?: '未設定'}">未設定</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
     <div class="row g-4">
         <section class="col-12 col-lg-6" aria-labelledby="assignee-title">
             <div class="command-panel rounded p-3 p-md-4 h-100">

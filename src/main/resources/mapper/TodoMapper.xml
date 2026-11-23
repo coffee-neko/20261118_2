@@ -160,6 +160,14 @@
         ORDER BY t.due_date, t.id
     </select>
 
+    <select id="findIncompleteTasksWithoutDueDate" resultMap="todoResultMap">
+        <include refid="todosWithDetails"/>
+        WHERE <include refid="tasksWithoutChildren"/>
+          AND t.status != 'COMPLETED'
+          AND t.due_date IS NULL
+        <include refid="hierarchyOrder"/>
+    </select>
+
     <select id="findDashboardByAssignee" resultMap="dashboardGroupResultMap">
         SELECT a.name AS group_name, COUNT(*) AS total_tasks,
                COUNT(CASE WHEN t.status = 'COMPLETED' THEN 1 END) AS completed_tasks

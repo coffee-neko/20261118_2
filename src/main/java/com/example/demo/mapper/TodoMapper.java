@@ -31,6 +31,7 @@ public interface TodoMapper {
 	TodoProgress findQuestProgress();
 	TodoDashboard.Summary findDashboardSummary(@Param("today") LocalDate today);
 	List<Todo> findUpcomingTasks(@Param("today") LocalDate today, @Param("lastDay") LocalDate lastDay);
+	List<Todo> findIncompleteTasksWithoutDueDate();
 	List<TodoDashboard.Group> findDashboardByAssignee();
 	List<TodoDashboard.Group> findDashboardByCategory();
 
