@@ -8,26 +8,40 @@
           rel="stylesheet"
           integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
           crossorigin="anonymous">
+    <link th:replace="~{fragments/quest-theme :: stylesheet}" rel="stylesheet">
+    <style>
+        .csv-preview-scroll {
+            border: 1px solid var(--quest-divider);
+            border-radius: .25rem;
+        }
+        .csv-preview-table { min-width: 64rem; table-layout: fixed; }
+        .csv-preview-table th { overflow-wrap: anywhere; }
+        .csv-preview-table thead th { --bs-table-bg: #223756; }
+        .csv-preview-table th:nth-child(-n+3) { width: 3.75rem; }
+        .csv-preview-table th:nth-child(4) { width: 17rem; }
+        .csv-preview-table th:nth-child(7),
+        .csv-preview-table th:nth-child(8) { width: 7rem; }
+    </style>
 </head>
-<body class="bg-light">
-<main class="container py-5">
+<body class="quest-theme quest-form-page" data-bs-theme="dark">
+<main class="container py-4 py-md-5">
     <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-4">
-        <h1 class="h2 mb-0">CSVインポート</h1>
-        <a class="btn btn-outline-secondary" th:href="@{/todo}">ToDo一覧に戻る</a>
+        <h1 class="h2 mb-0 quest-heading quest-title">CSVインポート</h1>
+        <a class="btn btn-outline-secondary quest-button" th:href="@{/todo}">ToDo一覧に戻る</a>
     </div>
 
-    <form class="card card-body mb-4" th:action="@{/todo/import/preview}" method="post" enctype="multipart/form-data">
+    <form class="card card-body mb-4 quest-window" th:action="@{/todo/import/preview}" method="post" enctype="multipart/form-data">
         <label for="csv-file" class="form-label">CSVファイル</label>
         <input id="csv-file" name="file" type="file" class="form-control" accept=".csv,text/csv"
                aria-describedby="csv-help" required>
-        <p id="csv-help" class="form-text mb-3">UTF-8のCSVを選択してください。上限は256 KB・500件です。親タスクも同じファイルに含めてください。</p>
+        <p id="csv-help" class="form-text mb-3 quest-note">UTF-8のCSVを選択してください。上限は256 KB・500件です。親タスクも同じファイルに含めてください。</p>
         <div class="d-flex flex-wrap gap-2">
-            <button type="submit" class="btn btn-primary">プレビュー</button>
-            <a class="btn btn-outline-primary" th:href="@{/todo/import/template.csv}">CSVテンプレートをダウンロード</a>
+            <button type="submit" class="btn btn-primary quest-button">プレビュー</button>
+            <a class="btn btn-outline-primary quest-button" th:href="@{/todo/import/template.csv}">CSVテンプレートをダウンロード</a>
         </div>
     </form>
 
-    <div class="alert alert-danger" role="alert" th:if="${errors != null and !errors.isEmpty()}">
+    <div class="alert alert-danger text-break" role="alert" th:if="${errors != null and !errors.isEmpty()}">
         <p class="fw-semibold mb-1">CSVを登録できません</p>
         <ul class="mb-0">
             <li th:each="issue : ${errors}">
@@ -37,7 +51,7 @@
         </ul>
     </div>
 
-    <div class="alert alert-warning" th:if="${warnings != null and !warnings.isEmpty()}">
+    <div class="alert alert-warning text-break" th:if="${warnings != null and !warnings.isEmpty()}">
         <p class="fw-semibold mb-1">入力内容を確認してください</p>
         <ul class="mb-0">
             <li th:each="issue : ${warnings}">
@@ -47,11 +61,12 @@
         </ul>
     </div>
 
-    <section th:if="${rowCount != null}" aria-labelledby="preview-heading">
-        <h2 class="h4" id="preview-heading" th:text="|プレビュー（${rowCount}件）|">プレビュー</h2>
-        <div class="table-responsive mb-3" th:if="${!rows.isEmpty()}">
-            <table class="table table-sm table-bordered bg-white align-middle mb-0">
-                <thead class="table-light">
+    <section class="quest-window rounded p-3 p-md-4" th:if="${rowCount != null}" aria-labelledby="preview-heading">
+        <h2 class="h4 quest-heading" id="preview-heading" th:text="|プレビュー（${rowCount}件）|">プレビュー</h2>
+        <div class="table-responsive csv-preview-scroll mb-3" th:if="${!rows.isEmpty()}"
+             role="region" aria-labelledby="preview-heading" tabindex="0">
+            <table class="table table-sm table-bordered align-middle mb-0 quest-table csv-preview-table">
+                <thead>
                     <tr>
                         <th scope="col">行番号</th>
                         <th scope="col" th:each="header : ${headers}" th:text="${header}">列名</th>
@@ -67,8 +82,8 @@
         </div>
         <form th:if="${confirmationId != null}" th:action="@{/todo/import/confirm}" method="post">
             <input type="hidden" name="confirmationId" th:value="${confirmationId}">
-            <p class="form-text">確認IDの有効期限は15分です。表示順を指定した行は同じ階層内で昇順になり、空欄の行はその後にCSVの行順で追加されます。</p>
-            <button type="submit" class="btn btn-success" th:text="|${rowCount}件を新規登録する|">登録を確定する</button>
+            <p class="form-text quest-note">確認IDの有効期限は15分です。表示順を指定した行は同じ階層内で昇順になり、空欄の行はその後にCSVの行順で追加されます。</p>
+            <button type="submit" class="btn btn-success quest-button" th:text="|${rowCount}件を新規登録する|">登録を確定する</button>
         </form>
     </section>
 </main>

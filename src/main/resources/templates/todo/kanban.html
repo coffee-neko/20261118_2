@@ -10,31 +10,36 @@
           rel="stylesheet"
           integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
           crossorigin="anonymous">
+    <link th:replace="~{fragments/quest-theme :: stylesheet}" rel="stylesheet">
     <style>
+        .kanban-theme { --bs-secondary-color: var(--quest-muted); }
+        .kanban-theme .btn-primary.quest-button {
+            --bs-btn-color: var(--quest-background);
+            --bs-btn-bg: var(--quest-link);
+            --bs-btn-border-color: var(--quest-link);
+        }
         .kanban-board {
-            --kanban-column-bg: #edf1f6;
-            --kanban-card-bg: #fff;
-            --kanban-accent-idle: #65748b;
-            --kanban-accent-active: #315fad;
-            --kanban-accent-done: #23764f;
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             align-items: start;
             gap: 1rem;
         }
-        .kanban-column {
-            --kanban-accent: var(--kanban-accent-idle);
+        .kanban-theme .kanban-column {
+            --kanban-accent: var(--quest-status-idle);
             min-height: 12rem;
             padding: .8rem;
-            border: 1px solid var(--bs-border-color);
-            border-block-start: .25rem solid var(--kanban-accent);
-            border-radius: .65rem;
-            background: var(--kanban-column-bg);
+            box-shadow: inset 0 .2rem var(--kanban-accent);
+            background-color: #101d36;
         }
-        .kanban-column[data-kanban-status="IN_PROGRESS"] { --kanban-accent: var(--kanban-accent-active); }
-        .kanban-column[data-kanban-status="COMPLETED"] { --kanban-accent: var(--kanban-accent-done); }
-        .kanban-column.is-drop-target { outline: 2px solid var(--kanban-accent); outline-offset: -2px; }
-        .kanban-card { background: var(--kanban-card-bg); }
+        .kanban-theme .kanban-column[data-kanban-status="IN_PROGRESS"] { --kanban-accent: var(--quest-status-active); }
+        .kanban-theme .kanban-column[data-kanban-status="COMPLETED"] { --kanban-accent: var(--quest-status-done); }
+        .kanban-column.is-drop-target { outline: 2px solid var(--quest-focus); outline-offset: 2px; }
+        .kanban-column h2 { color: var(--kanban-accent); }
+        .kanban-label {
+            color: var(--quest-text);
+            background-color: #283a57;
+            border: 1px solid var(--quest-divider);
+        }
         .kanban-card[draggable="true"] { cursor: grab; }
         .kanban-card.is-dragging { opacity: .5; }
         .kanban-card h3,
@@ -49,25 +54,36 @@
         }
         .kanban-details dt { font-weight: 500; }
         .kanban-details dd { margin: 0; }
-        .kanban-progress { height: .35rem; }
-        .kanban-progress .progress-bar { background: var(--kanban-accent); }
-        .kanban-move .form-select { width: auto; }
+        .kanban-theme .kanban-progress {
+            --bs-progress-bar-bg: var(--kanban-accent);
+            height: .45rem;
+        }
+        .kanban-move { min-width: 0; max-width: 100%; }
+        .kanban-move .form-select {
+            width: auto;
+            max-width: 100%;
+            min-height: 2rem;
+            color: var(--quest-text);
+            background-color: var(--quest-background);
+            border-color: var(--quest-divider);
+        }
         @media (max-width: 767.98px) {
             .kanban-board { grid-template-columns: minmax(0, 1fr); }
         }
     </style>
 </head>
-<body class="bg-light">
+<body class="quest-theme kanban-theme" data-bs-theme="dark">
 <main class="container py-4 py-md-5">
     <header class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
-        <h1 class="h2 mb-0">年調クエスト <span class="text-body-secondary">カンバン</span></h1>
+        <h1 class="h2 mb-0 quest-heading quest-title">年調クエスト <span class="quest-note">カンバン</span></h1>
         <div class="d-flex flex-wrap gap-2">
-            <a class="btn btn-outline-primary" th:href="@{/todo}">一覧へ</a>
-            <a class="btn btn-outline-primary" th:href="@{/todo/gantt}">ガント</a>
-            <a class="btn btn-primary" th:href="@{/todo/new}">新規登録</a>
+            <a class="btn btn-outline-primary quest-button" th:href="@{/todo}">一覧へ</a>
+            <a class="btn btn-outline-primary quest-button" th:href="@{/todo/dashboard}">作戦司令室</a>
+            <a class="btn btn-outline-primary quest-button" th:href="@{/todo/gantt}">ガント</a>
+            <a class="btn btn-primary quest-button" th:href="@{/todo/new}">新規登録</a>
             <form th:action="@{/logout}" method="post">
                 <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
-                <button type="submit" class="btn btn-outline-secondary">冒険を終了する</button>
+                <button type="submit" class="btn btn-outline-secondary quest-button">冒険を終了する</button>
             </form>
         </div>
     </header>
@@ -77,20 +93,20 @@
 
     <div id="kanban-board" class="kanban-board" aria-busy="false">
         <section th:each="status : ${statusOptions}" th:with="cards=${todosByStatus.get(status)}"
-                 class="kanban-column" th:attr="data-kanban-status=${status.name()},aria-label=${status.label}">
+                 class="kanban-column quest-window rounded" th:attr="data-kanban-status=${status.name()},aria-label=${status.label}">
             <header class="d-flex align-items-center justify-content-between gap-2 mb-3">
-                <h2 class="h5 mb-0" th:text="${status.label}">未着手</h2>
-                <span class="badge text-bg-light" th:text="|${#lists.size(cards)}件|">0件</span>
+                <h2 class="h5 mb-0 quest-heading" th:text="${status.label}">未着手</h2>
+                <span class="badge kanban-label" th:text="|${#lists.size(cards)}件|">0件</span>
             </header>
             <p th:if="${#lists.isEmpty(cards)}" class="small text-body-secondary mb-0">タスクなし</p>
 
             <article th:each="todo : ${cards}"
                      th:with="isChild=${todo.parentId != null},isParent=${todo.childCount > 0}"
-                     class="card kanban-card shadow-sm mb-2" draggable="true"
+                     class="card kanban-card shadow-sm mb-2 quest-card" draggable="true"
                      th:attr="data-status-url=@{/api/todo/{id}/status(id=${todo.id})},data-kanban-role=${isChild ? 'child' : (isParent ? 'parent' : 'independent')}">
                 <div class="card-body p-3">
                     <div class="d-flex flex-wrap gap-1 mb-2">
-                        <span class="badge text-bg-light"
+                        <span class="badge kanban-label"
                               th:text="${isChild ? '中作業' : (isParent ? '大作業' : '独立タスク')}">独立タスク</span>
                         <span class="badge"
                               th:classappend="${todo.status.completed ? 'text-bg-success' : (todo.status.name() == 'IN_PROGRESS' ? 'text-bg-primary' : 'text-bg-secondary')}"
@@ -116,21 +132,21 @@
                             <span th:text="|子タスク完了 ${todo.completedChildCount}/${todo.childCount}件|">子タスク完了 1/2件</span>
                             <span th:text="|${todo.childCompletionRate}%|">50%</span>
                         </div>
-                        <div class="progress kanban-progress" role="progressbar" aria-label="子タスク達成率"
+                        <div class="progress kanban-progress quest-gauge" role="progressbar" aria-label="子タスク達成率"
                              aria-valuemin="0" aria-valuemax="100" th:attr="aria-valuenow=${todo.childCompletionRate}">
                             <div class="progress-bar" th:style="|width: ${todo.childCompletionRate}%;|"></div>
                         </div>
                     </div>
                     <div class="d-flex align-items-center flex-wrap gap-2">
-                        <form class="kanban-move d-flex align-items-center gap-1">
+                        <form class="kanban-move d-flex flex-wrap align-items-center gap-1">
                             <select name="status" class="form-select form-select-sm"
                                     th:aria-label="|${todo.title}の移動先|">
                                 <option th:each="option : ${statusOptions}" th:value="${option.name()}"
                                         th:selected="${option == status}" th:text="${option.label}">未着手</option>
                             </select>
-                            <button type="submit" class="btn btn-outline-secondary btn-sm">移動</button>
+                            <button type="submit" class="btn btn-outline-secondary btn-sm quest-button">移動</button>
                         </form>
-                        <a class="btn btn-outline-primary btn-sm" draggable="false"
+                        <a class="btn btn-outline-primary btn-sm quest-button" draggable="false"
                            th:href="@{/todo/{id}/edit(id=${todo.id})}">編集</a>
                     </div>
                 </div>

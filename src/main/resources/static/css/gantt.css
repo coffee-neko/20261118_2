@@ -1,32 +1,23 @@
 .gantt-page {
-    --gantt-bg: #f5f7fa;
-    --gantt-surface: #fff;
-    --gantt-header: #eef2f7;
-    --gantt-border: #d9e0e8;
-    --gantt-text: #172332;
-    --gantt-muted: #49586a;
-    --gantt-link: #254d99;
-    --gantt-warning: #a32222;
-    --gantt-idle: #586474;
-    --gantt-active: #315fad;
-    --gantt-done: #23764f;
-    --gantt-saturday-bg: #e4edfa;
-    --gantt-saturday-text: #274e82;
-    --gantt-sunday-bg: #f9e9e9;
-    --gantt-sunday-text: #972e38;
+    --gantt-header: #223756;
+    --gantt-gridline: #536784;
+    --gantt-warning: #ffc6ce;
+    --gantt-saturday-bg: #1b3c63;
+    --gantt-saturday-text: #c7e1ff;
+    --gantt-sunday-bg: #502c43;
+    --gantt-sunday-text: #ffd2dd;
     --gantt-task-width: clamp(8rem, 21vw, 16rem);
     --gantt-day-min-width: 1.25rem;
     --gantt-detail-task-width: min(19rem, 46vw);
     --gantt-detail-day-width: 2.75rem;
+    box-sizing: border-box;
     min-height: 100vh;
     padding: clamp(.75rem, 3vw, 2rem);
-    background: var(--gantt-bg);
-    color: var(--gantt-text);
 }
 
-body {
+.gantt-theme {
     margin: 0;
-    font-family: system-ui, sans-serif;
+    color-scheme: dark;
 }
 
 .gantt-header,
@@ -37,38 +28,56 @@ body {
     gap: .5rem;
 }
 
-.gantt-header { justify-content: space-between; }
+.gantt-header { justify-content: space-between; margin-bottom: 1rem; }
+.gantt-window { min-width: 0; padding: clamp(.65rem, 2vw, 1.15rem); border-radius: .35rem; }
 .gantt-page h1 { margin: 0; font-size: 1.65rem; }
-.gantt-page h1 span { color: var(--gantt-muted); }
-.gantt-page h2 { margin: 1rem 0 .5rem; font-size: 1.25rem; }
-.gantt-page a { color: var(--gantt-link); }
+.gantt-page h1 span { color: var(--quest-muted); }
+.gantt-page h2 { margin: 0 0 .75rem; font-size: 1.25rem; }
+.gantt-page a { color: var(--quest-link); }
 
-.gantt-controls a,
-.gantt-page button,
+.gantt-page .quest-button,
 .gantt-page input {
+    box-sizing: border-box;
+    max-inline-size: 100%;
     padding: .35rem .6rem;
-    border: 1px solid var(--gantt-border);
-    border-radius: .35rem;
-    background: var(--gantt-surface);
+    border: 1px solid var(--quest-divider);
+    border-radius: .25rem;
+    background-color: var(--quest-background);
+    color: var(--quest-text);
     font: inherit;
 }
 
-.gantt-controls a[aria-current="page"],
-.gantt-modes button[aria-pressed="true"] {
-    background: var(--gantt-link);
-    color: var(--gantt-surface);
+.gantt-page .quest-button {
+    border-color: var(--bs-btn-border-color);
+    border-radius: var(--bs-btn-border-radius);
+    color: var(--bs-btn-color);
+    text-decoration: none;
 }
 
-.gantt-page button { color: var(--gantt-text); cursor: pointer; }
-.gantt-modes:not([hidden]) { display: flex; gap: .35rem; }
+.gantt-page .quest-button:hover {
+    border-color: var(--bs-btn-hover-border-color);
+    background-color: var(--bs-btn-hover-bg);
+    color: var(--bs-btn-hover-color);
+}
+
+.gantt-page .quest-button:is([aria-current="page"], [aria-pressed="true"]) {
+    border-color: var(--bs-btn-active-border-color);
+    background-color: var(--bs-btn-active-bg);
+    color: var(--bs-btn-active-color);
+}
+
+.gantt-page button { cursor: pointer; }
+.gantt-modes:not([hidden]) { display: flex; flex-wrap: wrap; gap: .35rem; }
 
 .gantt-scroll {
+    box-sizing: border-box;
+    max-width: 100%;
     max-height: 65vh;
     margin-top: .8rem;
     overflow: auto;
-    border: 1px solid var(--gantt-border);
+    border: 1px solid var(--quest-border);
     border-radius: .4rem;
-    background: var(--gantt-surface);
+    background: var(--quest-background);
 }
 
 .gantt-table {
@@ -89,7 +98,7 @@ body {
 .gantt-table th,
 .gantt-table td {
     padding: 0;
-    border-bottom: 1px solid var(--gantt-border);
+    border-bottom: 1px solid var(--gantt-gridline);
     vertical-align: middle;
 }
 
@@ -106,8 +115,8 @@ body {
     left: 0;
     z-index: 1;
     width: var(--gantt-task-width);
-    border-right: 1px solid var(--gantt-border);
-    background: var(--gantt-surface);
+    border-right: 2px solid var(--quest-divider);
+    background: var(--quest-surface);
     text-align: left;
 }
 
@@ -127,11 +136,11 @@ body {
 .gantt-title { font-weight: 650; }
 .gantt-meta, .gantt-warning { margin: .2rem 0 0; font-size: .85rem; }
 .gantt-meta, .gantt-progress { display: flex; flex-wrap: wrap; align-items: center; gap: .15rem .55rem; }
-.gantt-meta { color: var(--gantt-muted); }
+.gantt-meta { color: var(--quest-muted); }
 .gantt-warning { color: var(--gantt-warning); font-weight: 650; }
 .gantt-progress { margin-top: .25rem; font-size: .8rem; }
-.gantt-progress progress { width: min(4rem, 100%); accent-color: var(--gantt-done); }
-.gantt-progress button { padding: .15rem .4rem; }
+.gantt-progress progress { width: min(4rem, 100%); accent-color: var(--quest-status-done); }
+.gantt-progress .quest-button { padding: .15rem .4rem; }
 
 .gantt-day-grid {
     display: grid;
@@ -141,7 +150,7 @@ body {
 
 .gantt-day-grid time {
     align-self: stretch;
-    border-right: 1px solid var(--gantt-border);
+    border-right: 1px solid var(--gantt-gridline);
     padding: .35rem 0;
     text-align: center;
     font-size: .75rem;
@@ -163,8 +172,9 @@ body {
 }
 
 .gantt-day-grid time[aria-current="date"] {
-    background: var(--gantt-link);
-    color: var(--gantt-surface);
+    background: var(--quest-link);
+    color: var(--quest-background);
+    box-shadow: inset 0 -2px var(--quest-focus);
 }
 
 .gantt-track { min-height: 2rem; }
@@ -173,18 +183,18 @@ body {
     --gantt-day-share: calc(100% / var(--days));
     background-image: repeating-linear-gradient(to right,
         transparent 0 calc(var(--gantt-day-share) - 1px),
-        var(--gantt-border) calc(var(--gantt-day-share) - 1px) var(--gantt-day-share));
+        var(--gantt-gridline) calc(var(--gantt-day-share) - 1px) var(--gantt-day-share));
 }
 
-.gantt-table tr { --status-color: var(--gantt-idle); }
-.gantt-table tr[data-status="IN_PROGRESS"] { --status-color: var(--gantt-active); }
-.gantt-table tr[data-status="COMPLETED"] { --status-color: var(--gantt-done); }
+.gantt-table tr { --status-color: var(--quest-status-idle); }
+.gantt-table tr[data-status="IN_PROGRESS"] { --status-color: var(--quest-status-active); }
+.gantt-table tr[data-status="COMPLETED"] { --status-color: var(--quest-status-done); }
 .gantt-status { color: var(--status-color); font-weight: 650; }
 
 .gantt-bar,
 .gantt-marker {
     background: var(--status-color);
-    color: var(--gantt-surface);
+    color: var(--quest-background);
 }
 
 .gantt-bar {

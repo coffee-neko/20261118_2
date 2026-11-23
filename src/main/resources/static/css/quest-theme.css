@@ -9,6 +9,9 @@
     --quest-focus: #ffe38a;
     --quest-gauge-track: #263f64;
     --quest-gauge-fill: #0dcaf0;
+    --quest-status-idle: #b7c5d9;
+    --quest-status-active: #83b9ff;
+    --quest-status-done: #80d6a8;
     background-color: var(--quest-background);
     color: var(--quest-text);
     font-family: system-ui, "Yu Gothic UI", Meiryo, "Hiragino Kaku Gothic ProN", sans-serif;
@@ -81,17 +84,17 @@
     outline-offset: 2px;
 }
 
-.quest-registration {
+:is(.quest-registration, .quest-form-page) {
     color-scheme: dark;
     --bs-secondary-color: var(--quest-muted);
 }
 
-.quest-registration .quest-title {
+:is(.quest-registration, .quest-form-page) .quest-title {
     border-block-end: 1px solid var(--quest-divider);
     padding-block-end: .6rem;
 }
 
-.quest-registration :is(.form-control, .form-select) {
+:is(.quest-registration, .quest-form-page) :is(.form-control, .form-select) {
     min-width: 0;
     max-width: 100%;
     color: var(--quest-text);
@@ -103,10 +106,27 @@
     color: var(--quest-text);
 }
 
-.quest-registration .btn-primary.quest-button {
+:is(.quest-registration, .quest-form-page) .btn-primary.quest-button {
     --bs-btn-color: var(--quest-background);
     --bs-btn-bg: var(--quest-link);
     --bs-btn-border-color: var(--quest-link);
+}
+
+.quest-form-page .form-control::file-selector-button {
+    color: var(--quest-text);
+    background-color: var(--quest-surface);
+    border-color: var(--quest-divider);
+}
+
+.quest-form-page .btn-success.quest-button { --quest-action-color: var(--quest-status-done, #80d6a8); }
+.quest-form-page .btn-danger.quest-button { --quest-action-color: #ffc6ce; }
+
+.quest-form-page .quest-button:is(.btn-success, .btn-danger) {
+    --bs-btn-color: var(--quest-background);
+    --bs-btn-bg: var(--quest-action-color);
+    --bs-btn-border-color: var(--quest-action-color);
+    --bs-btn-active-bg: var(--quest-action-color);
+    --bs-btn-active-border-color: var(--quest-action-color);
 }
 
 .command-room .command-link {
