@@ -8,32 +8,21 @@
           rel="stylesheet"
           integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
           crossorigin="anonymous">
-    <style>
-        .command-room { background: #0c1630; color: #fff; }
-        .command-panel { background: #142446; border: 1px solid #fff; }
-        .command-note { color: #c7d8ef; }
-        .command-room .table {
-            --bs-table-color: #fff;
-            --bs-table-bg: #142446;
-            --bs-table-border-color: #8097b8;
-        }
-        .command-room .table a { color: #b5d8ff; overflow-wrap: anywhere; }
-        .command-room .progress { background: #263f64; height: 1rem; }
-    </style>
+    <link th:replace="~{fragments/quest-theme :: stylesheet}" rel="stylesheet">
 </head>
-<body class="command-room">
+<body class="command-room quest-theme">
 <main class="container py-5" th:with="summary=${dashboard.summary()}">
     <header class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
         <div>
-            <h1 class="h2 mb-2">総務部の作戦司令室</h1>
-            <p class="command-note mb-0" th:text="|${dashboard.today()} 現在（日本時間）|">集計日</p>
+            <h1 class="h2 mb-2 quest-heading">総務部の作戦司令室</h1>
+            <p class="command-note mb-0 quest-note" th:text="|${dashboard.today()} 現在（日本時間）|">集計日</p>
         </div>
-        <a class="btn btn-outline-light" th:href="@{/todo}">ToDo一覧に戻る</a>
+        <a class="btn btn-outline-light quest-button" th:href="@{/todo}">ToDo一覧に戻る</a>
     </header>
 
-    <section class="command-panel rounded p-3 p-md-4 mb-4" aria-labelledby="overview-title">
-        <h2 id="overview-title" class="h4">全体の進捗</h2>
-        <p class="command-note">子タスクと、子を持たないタスクを集計しています。</p>
+    <section class="command-panel rounded p-3 p-md-4 mb-4 quest-window" aria-labelledby="overview-title">
+        <h2 id="overview-title" class="h4 quest-heading">全体の進捗</h2>
+        <p class="command-note quest-note">子タスクと、子を持たないタスクを集計しています。</p>
         <dl class="row row-cols-2 row-cols-md-3 row-cols-lg-5 g-3 mb-4">
             <div class="col">
                 <dt>全タスク件数</dt>
@@ -52,18 +41,18 @@
             <span>全体達成率</span>
             <strong th:text="|${summary.percentage()}%|">0%</strong>
         </div>
-        <div class="progress" role="progressbar" aria-label="全体達成率" aria-valuemin="0" aria-valuemax="100"
+        <div class="progress quest-gauge" role="progressbar" aria-label="全体達成率" aria-valuemin="0" aria-valuemax="100"
              th:attr="aria-valuenow=${summary.percentage()}">
             <div class="progress-bar bg-info" th:style="|width: ${summary.percentage()}%;|"></div>
         </div>
     </section>
 
-    <section class="command-panel rounded p-3 p-md-4 mb-4" aria-labelledby="upcoming-title">
-        <h2 id="upcoming-title" class="h4">期限が近い未完了タスク</h2>
-        <p class="command-note mb-3" th:text="|${dashboard.today()} ～ ${dashboard.lastDay()}|">今日から6日後まで</p>
+    <section class="command-panel rounded p-3 p-md-4 mb-4 quest-window" aria-labelledby="upcoming-title">
+        <h2 id="upcoming-title" class="h4 quest-heading">期限が近い未完了タスク</h2>
+        <p class="command-note mb-3 quest-note" th:text="|${dashboard.today()} ～ ${dashboard.lastDay()}|">今日から6日後まで</p>
         <p class="mb-0" th:if="${#lists.isEmpty(dashboard.upcoming())}">この期間に期限を迎える未完了タスクはありません。</p>
         <div class="table-responsive" th:unless="${#lists.isEmpty(dashboard.upcoming())}">
-            <table class="table align-middle mb-0">
+            <table class="table align-middle mb-0 quest-table">
                 <thead>
                 <tr><th scope="col">期限</th><th scope="col">タスク名</th><th scope="col">状態</th><th scope="col">担当者</th></tr>
                 </thead>
@@ -79,13 +68,13 @@
         </div>
     </section>
 
-    <section class="command-panel rounded p-3 p-md-4 mb-4" aria-labelledby="without-due-date-title"
+    <section class="command-panel rounded p-3 p-md-4 mb-4 quest-window" aria-labelledby="without-due-date-title"
              th:with="tasks=${dashboard.withoutDueDate()}">
-        <h2 id="without-due-date-title" class="h4">期限未設定の未完了タスク</h2>
-        <p class="command-note mb-3" th:text="|${tasks.size()}件|">0件</p>
+        <h2 id="without-due-date-title" class="h4 quest-heading">期限未設定の未完了タスク</h2>
+        <p class="command-note mb-3 quest-note" th:text="|${tasks.size()}件|">0件</p>
         <p class="mb-0" th:if="${#lists.isEmpty(tasks)}">期限未設定の未完了タスクはありません。</p>
         <div class="table-responsive" th:unless="${#lists.isEmpty(tasks)}">
-            <table class="table align-middle mb-0">
+            <table class="table align-middle mb-0 quest-table">
                 <thead>
                 <tr><th scope="col">タスク名</th><th scope="col">状態</th><th scope="col">担当者</th></tr>
                 </thead>
@@ -102,11 +91,11 @@
 
     <div class="row g-4">
         <section class="col-12 col-lg-6" aria-labelledby="assignee-title">
-            <div class="command-panel rounded p-3 p-md-4 h-100">
-                <h2 id="assignee-title" class="h4">担当者別</h2>
+            <div class="command-panel rounded p-3 p-md-4 h-100 quest-card">
+                <h2 id="assignee-title" class="h4 quest-heading">担当者別</h2>
                 <p class="mb-0" th:if="${#lists.isEmpty(dashboard.byAssignee())}">集計対象のタスクはありません。</p>
                 <div class="table-responsive" th:unless="${#lists.isEmpty(dashboard.byAssignee())}">
-                    <table class="table align-middle mb-0">
+                    <table class="table align-middle mb-0 quest-table">
                         <thead>
                         <tr><th scope="col">担当者</th><th scope="col" class="text-end">件数</th>
                             <th scope="col" class="text-end">完了件数</th><th scope="col" class="text-end">完了率</th></tr>
@@ -124,11 +113,11 @@
             </div>
         </section>
         <section class="col-12 col-lg-6" aria-labelledby="category-title">
-            <div class="command-panel rounded p-3 p-md-4 h-100">
-                <h2 id="category-title" class="h4">カテゴリ別</h2>
+            <div class="command-panel rounded p-3 p-md-4 h-100 quest-card">
+                <h2 id="category-title" class="h4 quest-heading">カテゴリ別</h2>
                 <p class="mb-0" th:if="${#lists.isEmpty(dashboard.byCategory())}">集計対象のタスクはありません。</p>
                 <div class="table-responsive" th:unless="${#lists.isEmpty(dashboard.byCategory())}">
-                    <table class="table align-middle mb-0">
+                    <table class="table align-middle mb-0 quest-table">
                         <thead>
                         <tr><th scope="col">カテゴリ</th><th scope="col" class="text-end">件数</th>
                             <th scope="col" class="text-end">完了件数</th><th scope="col" class="text-end">完了率</th></tr>

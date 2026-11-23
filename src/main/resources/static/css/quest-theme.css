@@ -1,0 +1,82 @@
+.quest-theme {
+    --quest-background: #0c1630;
+    --quest-surface: #142446;
+    --quest-border: #fff;
+    --quest-text: #fff;
+    --quest-muted: #c7d8ef;
+    --quest-link: #b5d8ff;
+    --quest-divider: #8097b8;
+    --quest-focus: #ffe38a;
+    --quest-gauge-track: #263f64;
+    --quest-gauge-fill: #0dcaf0;
+    background-color: var(--quest-background);
+    color: var(--quest-text);
+    font-family: system-ui, "Yu Gothic UI", Meiryo, "Hiragino Kaku Gothic ProN", sans-serif;
+}
+
+.quest-theme :is(.quest-window, .quest-card) {
+    background-color: var(--quest-surface);
+    border: 1px solid var(--quest-border);
+}
+
+.quest-theme .quest-heading {
+    font-weight: 700;
+    letter-spacing: .025em;
+    text-shadow: 2px 2px var(--quest-background);
+}
+
+.quest-theme .quest-title {
+    border-inline-start: .25rem solid var(--quest-link);
+    padding-inline-start: .65rem;
+}
+
+.quest-theme .quest-note {
+    color: var(--quest-muted);
+}
+
+.quest-theme :where(button, input, select, textarea) {
+    font-family: inherit;
+}
+
+.quest-theme .quest-button {
+    --bs-btn-color: var(--quest-text);
+    --bs-btn-border-color: var(--quest-border);
+    --bs-btn-hover-color: var(--quest-background);
+    --bs-btn-hover-bg: var(--quest-border);
+    --bs-btn-hover-border-color: var(--quest-border);
+    --bs-btn-active-color: var(--quest-background);
+    --bs-btn-active-bg: var(--quest-link);
+    --bs-btn-active-border-color: var(--quest-link);
+    --bs-btn-disabled-color: var(--quest-muted);
+    --bs-btn-disabled-border-color: var(--quest-divider);
+    --bs-btn-border-radius: .25rem;
+}
+
+.quest-theme .quest-table {
+    --bs-table-color: var(--quest-text);
+    --bs-table-bg: var(--quest-surface);
+    --bs-table-border-color: var(--quest-divider);
+}
+
+.quest-theme .quest-link,
+.quest-theme .quest-table a:not(.quest-button) {
+    color: var(--quest-link);
+    overflow-wrap: anywhere;
+}
+
+.quest-theme .quest-gauge {
+    --bs-progress-bar-bg: var(--quest-gauge-fill);
+    height: 1rem;
+    background-color: var(--quest-gauge-track);
+}
+
+.quest-theme .quest-gauge > .progress-bar {
+    background-image: repeating-linear-gradient(
+        90deg, transparent 0 7px, rgb(12 22 48 / 38%) 7px 8px
+    );
+}
+
+.quest-theme :is(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--quest-focus);
+    outline-offset: 2px;
+}
