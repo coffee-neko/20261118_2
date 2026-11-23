@@ -90,7 +90,8 @@
         .todo-dates dt { font-weight: 500; }
         .todo-dates dd { margin: 0; font-variant-numeric: tabular-nums; }
         .todo-date { white-space: nowrap; }
-        .todo-overdue { display: inline-block; margin-block-start: .25rem; }
+        .todo-deadline-alert { display: inline-block; margin-block-start: .25rem; }
+        .todo-deadline-today { background-color: #b54708; color: #fff; }
 
         .todo-actions,
         .todo-secondary-actions,
@@ -349,8 +350,11 @@
                             <dt class="text-body-secondary">期限</dt>
                             <dd class="todo-date" th:text="${todo.dueDate != null ? todo.dueDate : '未設定'}">未設定</dd>
                         </dl>
-                        <span class="badge text-bg-danger todo-overdue"
-                              th:if="${!completed and todo.dueDate != null and todo.dueDate.isBefore(today)}">期限超過</span>
+                        <span class="badge todo-deadline-alert"
+                              th:if="${!completed and todo.dueDate != null and !todo.dueDate.isAfter(today.plusDays(3))}"
+                              th:with="overdue=${todo.dueDate.isBefore(today)}, dueToday=${todo.dueDate.equals(today)}"
+                              th:classappend="${overdue ? 'text-bg-danger' : (dueToday ? 'todo-deadline-today' : 'text-bg-warning')}"
+                              th:text="${overdue ? '期限超過' : (dueToday ? '本日締切' : '期限間近')}">期限超過</span>
                     </td>
                     <td class="todo-actions-cell" role="cell">
                         <div class="todo-actions">
