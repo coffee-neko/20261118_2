@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>年調クエスト | 月間カレンダー</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
+          crossorigin="anonymous">
+    <link th:replace="~{fragments/quest-theme :: stylesheet}" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/calendar.css}">
+</head>
+<body class="quest-theme">
+<main class="calendar-page">
+    <header class="calendar-header">
+        <h1 class="quest-heading quest-title">年調クエスト <span>月間カレンダー</span></h1>
+        <nav class="calendar-nav" aria-label="ToDo画面の切り替え">
+            <a class="btn btn-outline-primary quest-button" th:href="@{/todo}">ToDo一覧</a>
+            <a class="btn btn-outline-primary quest-button" th:href="@{/todo/dashboard}">作戦司令室</a>
+            <a class="btn btn-outline-primary quest-button" th:href="@{/todo/kanban}">カンバン</a>
+            <a class="btn btn-outline-primary quest-button" th:href="@{/todo/gantt(month=${calendar.month.toString()})}">ガント</a>
+        </nav>
+    </header>
+
+    <section class="quest-window calendar-window" aria-labelledby="calendar-title">
+        <div class="calendar-controls">
+            <h2 id="calendar-title" class="quest-heading" th:text="|${calendar.month.getYear()}年${calendar.month.getMonthValue()}月|">2026年11月</h2>
+            <nav class="calendar-controls" aria-label="表示月の移動">
+                <a class="btn btn-outline-primary quest-button" th:if="${previousMonth != null}"
+                   th:href="@{/todo/calendar(month=${previousMonth.toString()})}">前月</a>
+                <a class="btn btn-outline-primary quest-button" th:href="@{/todo/calendar}">今日</a>
+                <a class="btn btn-outline-primary quest-button" th:if="${nextMonth != null}"
+                   th:href="@{/todo/calendar(month=${nextMonth.toString()})}">翌月</a>
+            </nav>
+        </div>
+        <p class="calendar-warning" th:if="${calendarInputWarning}" th:text="${calendarInputWarning}"></p>
+        <p class="calendar-warning" th:if="${calendar.holidayInformationUnavailable}">
+            祝日情報を取得できない年があります。該当年の祝日は色分けされません。
+        </p>
+
+        <div class="calendar-scroll" role="region" aria-label="月間タスクカレンダー" tabindex="0">
+            <div class="calendar-grid">
+                <div class="calendar-weekday calendar-cell--sunday">日</div>
+                <div class="calendar-weekday">月</div>
+                <div class="calendar-weekday">火</div>
+                <div class="calendar-weekday">水</div>
+                <div class="calendar-weekday">木</div>
+                <div class="calendar-weekday">金</div>
+                <div class="calendar-weekday calendar-cell--saturday">土</div>
+
+                <th:block th:each="week : ${calendar.weeks}">
+                    <div th:each="day : ${week}"
+                         class="calendar-cell"
+                         th:classappend="${day.date == null ? ' calendar-cell--blank' :
+                             (day.holidayName != null ? ' calendar-cell--holiday' :
+                             (day.sunday ? ' calendar-cell--sunday' : (day.saturday ? ' calendar-cell--saturday' : ''))) +
+                             (day.today ? ' calendar-cell--today' : '') + (day.selected ? ' calendar-cell--selected' : '')}">
+                        <th:block th:if="${day.date != null}">
+                            <a class="calendar-date-link" th:href="@{/todo/calendar(month=${calendar.month.toString()}, date=${day.date.toString()})}"
+                               th:attr="aria-current=${day.today ? 'date' : null},title=|${day.date} のタスクを確認|"
+                               th:text="${day.date.dayOfMonth}">1</a>
+                            <div class="calendar-holiday" th:text="${day.holidayName ?: ''}"></div>
+                            <div class="calendar-task-list">
+                                <a th:each="task : ${day.visibleTasks}" class="calendar-task"
+                                   th:href="@{/todo/{id}(id=${task.id})}" th:text="${task.title}"
+                                   th:style="|--calendar-category: ${task.categoryColor ?: '#8097b8'};|"
+                                   th:attr="data-status=${task.status.name()},data-overdue=${!task.status.completed and task.dueDate.isBefore(today)}">
+                                    タスク名
+                                </a>
+                            </div>
+                            <p class="calendar-more" th:if="${day.remainingTaskCount > 0}"
+                               th:text="|ほか${day.remainingTaskCount}件|">ほか1件</p>
+                        </th:block>
+                    </div>
+                </th:block>
+            </div>
+        </div>
+
+        <section class="mt-4" th:if="${calendar.selectedDate != null}" aria-labelledby="selected-date-title">
+            <h2 id="selected-date-title" class="quest-heading" th:text="|${calendar.selectedDate} の期限タスク|">選択日の期限タスク</h2>
+            <p class="quest-note mb-0" th:if="${#lists.isEmpty(calendar.selectedTasks)}">この日の期限タスクはありません。</p>
+            <ul class="calendar-selected-tasks" th:unless="${#lists.isEmpty(calendar.selectedTasks)}">
+                <li th:each="task : ${calendar.selectedTasks}" class="calendar-selected-task"
+                    th:style="|--calendar-category: ${task.categoryColor ?: '#8097b8'};|"
+                    th:attr="data-status=${task.status.name()},data-overdue=${!task.status.completed and task.dueDate.isBefore(today)}">
+                    <a th:href="@{/todo/{id}(id=${task.id})}" th:text="${task.title}">タスク名</a>
+                    <p class="calendar-task-meta">
+                        <span th:text="${task.status.label}">未着手</span>
+                        <span th:if="${task.categoryName}" th:text="|カテゴリ: ${task.categoryName}|">カテゴリ</span>
+                        <span th:if="${task.childCount > 0}" th:text="|子タスク進捗: ${task.completedChildCount}/${task.childCount}件 (${task.childCompletionRate}%)|">子タスク進捗</span>
+                    </p>
+                </li>
+            </ul>
+        </section>
+    </section>
+</main>
+</body>
+</html>

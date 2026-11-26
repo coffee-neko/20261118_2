@@ -17,7 +17,10 @@
             <h1 class="h2 mb-2 quest-heading">総務部の作戦司令室</h1>
             <p class="command-note mb-0 quest-note" th:text="|${dashboard.today()} 現在（日本時間）|">集計日</p>
         </div>
-        <a class="btn btn-outline-light quest-button" th:href="@{/todo}">ToDo一覧に戻る</a>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-outline-light quest-button" th:href="@{/todo}">ToDo一覧に戻る</a>
+            <a class="btn btn-outline-light quest-button" th:href="@{/todo/calendar}">カレンダー</a>
+        </div>
     </header>
 
     <div class="row g-3 mb-4">
@@ -52,6 +55,11 @@
                     <li>
                         <a class="command-link" th:href="@{/todo}">
                             <span class="command-cursor" aria-hidden="true">▶&#xfe0e;</span><span>依頼一覧</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="command-link" th:href="@{/todo/calendar}">
+                            <span class="command-cursor" aria-hidden="true">▶&#xfe0e;</span><span>カレンダーを見る</span>
                         </a>
                     </li>
                     <li>

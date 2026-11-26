@@ -41,6 +41,14 @@ public class JapaneseHolidayService {
 	private final URI apiBaseUri;
 	private final ConcurrentHashMap<Integer, YearHolidays> cache = new ConcurrentHashMap<>();
 
+	/**
+	 * Creates the application-managed service without depending on web-layer JSON
+	 * mapper auto-configuration.
+	 */
+	public JapaneseHolidayService() {
+		this(new ObjectMapper());
+	}
+
 	public JapaneseHolidayService(ObjectMapper objectMapper) {
 		this(objectMapper, DEFAULT_API_BASE_URI);
 	}

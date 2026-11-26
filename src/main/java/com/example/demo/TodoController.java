@@ -4,7 +4,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
@@ -17,8 +16,11 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import com.example.demo.model.Todo;
+import com.example.demo.model.TodoCalendar;
 import com.example.demo.model.TodoProgress;
 import com.example.demo.model.TodoStatus;
+import com.example.demo.service.JapaneseHolidayService;
+import com.example.demo.service.JapaneseHolidayService.HolidayPeriod;
 import com.example.demo.service.TodoService;
 import com.example.demo.service.TodoService.ListPage;
 import org.springframework.http.CacheControl;
@@ -47,13 +49,15 @@ import static com.example.demo.service.TodoService.parseDate;
 public class TodoController {
 
 	static final String SORT_DUE_DATE = "due";
-	private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Tokyo");
+	private static final java.time.ZoneId BUSINESS_ZONE = JapaneseHolidayService.JAPAN_ZONE;
 	private static final String STATUS_ALL = "all";
 
 	private final TodoService todoService;
+	private final JapaneseHolidayService holidayService;
 
-	public TodoController(TodoService todoService) {
+	public TodoController(TodoService todoService, JapaneseHolidayService holidayService) {
 		this.todoService = todoService;
+		this.holidayService = holidayService;
 	}
 
 	@GetMapping
@@ -176,6 +180,76 @@ public class TodoController {
 		model.addAttribute("days", IntStream.rangeClosed(1, displayMonth.lengthOfMonth())
 				.mapToObj(displayMonth::atDay).toList());
 		return "todo/gantt";
+	}
+
+	@GetMapping("/calendar")
+	public String calendar(@RequestParam(name = "month", required = false) String requestedMonth,
+			@RequestParam(name = "date", required = false) String requestedDate, Model model) {
+		LocalDate today = LocalDate.now(BUSINESS_ZONE);
+		YearMonth displayMonth = YearMonth.from(today);
+		boolean monthWasRequested = requestedMonth != null && !requestedMonth.isBlank();
+		if (monthWasRequested) {
+			try {
+				displayMonth = TodoGantt.parseMonth(requestedMonth);
+			} catch (IllegalArgumentException | DateTimeParseException exception) {
+				model.addAttribute("calendarInputWarning", "年月の指定を読み取れなかったため、今月を表示しています。");
+			}
+		}
+
+		LocalDate selectedDate = null;
+		if (requestedDate != null && !requestedDate.isBlank()) {
+			try {
+				LocalDate parsedDate = LocalDate.parse(requestedDate);
+				if (!monthWasRequested) {
+					displayMonth = YearMonth.from(parsedDate);
+					selectedDate = parsedDate;
+				} else if (YearMonth.from(parsedDate).equals(displayMonth)) {
+					selectedDate = parsedDate;
+				} else {
+					model.addAttribute("calendarInputWarning", "選択日は表示月に含まれないため、日付の選択を解除しました。");
+				}
+			} catch (DateTimeParseException exception) {
+				model.addAttribute("calendarInputWarning", "日付の指定を読み取れなかったため、日付の選択を解除しました。");
+			}
+		}
+
+		List<Todo> todos = todoService.findForKanban();
+		Map<LocalDate, List<Todo>> todosByDueDate = new HashMap<>();
+		for (Todo todo : todos) {
+			if (todo.getDueDate() != null && YearMonth.from(todo.getDueDate()).equals(displayMonth)) {
+				todosByDueDate.computeIfAbsent(todo.getDueDate(), ignored -> new ArrayList<>()).add(todo);
+			}
+		}
+		HolidayPeriod holidays = holidayService.findHolidays(displayMonth.atDay(1), displayMonth.atEndOfMonth());
+		TodoCalendar calendar = buildCalendar(displayMonth, today, selectedDate, todosByDueDate, holidays);
+		model.addAttribute("calendar", calendar);
+		model.addAttribute("today", today);
+		model.addAttribute("previousMonth", TodoGantt.FIRST_MONTH.equals(displayMonth) ? null : displayMonth.minusMonths(1));
+		model.addAttribute("nextMonth", TodoGantt.LAST_MONTH.equals(displayMonth) ? null : displayMonth.plusMonths(1));
+		return "todo/calendar";
+	}
+
+	private TodoCalendar buildCalendar(YearMonth month, LocalDate today, LocalDate selectedDate,
+			Map<LocalDate, List<Todo>> todosByDueDate, HolidayPeriod holidays) {
+		List<TodoCalendar.Day> cells = new ArrayList<>();
+		for (int index = 0; index < month.atDay(1).getDayOfWeek().getValue() % 7; index++) {
+			cells.add(new TodoCalendar.Day(null, null, List.of(), 0, false, false));
+		}
+		for (int dayOfMonth = 1; dayOfMonth <= month.lengthOfMonth(); dayOfMonth++) {
+			LocalDate date = month.atDay(dayOfMonth);
+			List<Todo> tasks = todosByDueDate.getOrDefault(date, List.of());
+			cells.add(new TodoCalendar.Day(date, holidays.holidays().get(date), tasks.stream().limit(3).toList(),
+					Math.max(0, tasks.size() - 3), date.equals(today), date.equals(selectedDate)));
+		}
+		while (cells.size() % 7 != 0) {
+			cells.add(new TodoCalendar.Day(null, null, List.of(), 0, false, false));
+		}
+
+		List<List<TodoCalendar.Day>> weeks = IntStream.range(0, cells.size() / 7)
+				.mapToObj(week -> List.copyOf(cells.subList(week * 7, week * 7 + 7))).toList();
+		List<Todo> selectedTasks = selectedDate == null ? List.of()
+				: List.copyOf(todosByDueDate.getOrDefault(selectedDate, List.of()));
+		return new TodoCalendar(month, weeks, selectedDate, selectedTasks, !holidays.unavailableYears().isEmpty());
 	}
 
 	private Map<Long, String> buildDisplayNumbers(List<Todo> orderedTodos) {
