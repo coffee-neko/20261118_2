@@ -9,6 +9,7 @@
           integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
           crossorigin="anonymous">
     <link th:replace="~{fragments/quest-theme :: stylesheet}" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/calendar.css}">
 </head>
 <body class="command-room quest-theme">
 <main class="container py-5" th:with="summary=${dashboard.summary()}">
@@ -76,6 +77,45 @@
             </div>
         </nav>
     </div>
+
+    <section class="command-panel rounded p-3 p-md-4 mb-4 quest-window mini-calendar-panel" aria-labelledby="mini-calendar-title">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            <h2 id="mini-calendar-title" class="h4 mb-0 quest-heading">暦の見張り台</h2>
+            <a class="quest-link" th:href="@{/todo/calendar}">月間カレンダーを開く</a>
+        </div>
+        <p class="calendar-warning mb-3" th:if="${miniCalendarHolidayInformationUnavailable}">
+            祝日情報を取得できない月があります。該当年の祝日は色分けされません。
+        </p>
+        <div class="mini-calendar-layout">
+            <section class="mini-calendar" th:each="calendar : ${miniCalendars}"
+                     th:attr="aria-label=|${calendar.month.getYear()}年${calendar.month.getMonthValue()}月のミニカレンダー|">
+                <h3 class="h6 quest-heading mb-2" th:text="|${calendar.month.getYear()}年${calendar.month.getMonthValue()}月|">2026年11月</h3>
+                <div class="mini-calendar-grid">
+                    <div class="mini-calendar-weekday mini-calendar-cell--sunday">日</div>
+                    <div class="mini-calendar-weekday">月</div>
+                    <div class="mini-calendar-weekday">火</div>
+                    <div class="mini-calendar-weekday">水</div>
+                    <div class="mini-calendar-weekday">木</div>
+                    <div class="mini-calendar-weekday">金</div>
+                    <div class="mini-calendar-weekday mini-calendar-cell--saturday">土</div>
+                    <th:block th:each="week : ${calendar.weeks}">
+                        <div th:each="day : ${week}" class="mini-calendar-cell"
+                             th:classappend="${day.date == null ? ' mini-calendar-cell--blank' :
+                                 (day.holidayName != null ? ' mini-calendar-cell--holiday' :
+                                 (day.sunday ? ' mini-calendar-cell--sunday' : (day.saturday ? ' mini-calendar-cell--saturday' : ''))) +
+                                 (day.today ? ' mini-calendar-cell--today' : '')}">
+                            <a th:if="${day.date != null}" class="mini-calendar-date"
+                               th:href="@{/todo/calendar(month=${calendar.month.toString()},date=${day.date.toString()})}"
+                               th:attr="aria-current=${day.today ? 'date' : null},title=|${day.date} の期限タスクを確認|">
+                                <span th:text="${day.date.dayOfMonth}">1</span>
+                                <span class="mini-calendar-task-dot" th:if="${day.hasTasks()}" aria-label="期限タスクあり"></span>
+                            </a>
+                        </div>
+                    </th:block>
+                </div>
+            </section>
+        </div>
+    </section>
 
     <section class="command-panel rounded p-3 p-md-4 mb-4 quest-window" aria-labelledby="overview-title">
         <h2 id="overview-title" class="h4 quest-heading">全体の進捗</h2>

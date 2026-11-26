@@ -11,6 +11,10 @@ public record TodoCalendar(YearMonth month, List<List<Day>> weeks, LocalDate sel
 
 	public record Day(LocalDate date, String holidayName, List<Todo> visibleTasks, int remainingTaskCount,
 			boolean today, boolean selected) {
+		public boolean hasTasks() {
+			return !visibleTasks.isEmpty();
+		}
+
 		public boolean isSunday() {
 			return date.getDayOfWeek() == DayOfWeek.SUNDAY;
 		}

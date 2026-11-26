@@ -29,7 +29,7 @@
             <nav class="calendar-controls" aria-label="表示月の移動">
                 <a class="btn btn-outline-primary quest-button" th:if="${previousMonth != null}"
                    th:href="@{/todo/calendar(month=${previousMonth.toString()})}">前月</a>
-                <a class="btn btn-outline-primary quest-button" th:href="@{/todo/calendar}">今日</a>
+                <a class="btn btn-outline-primary quest-button" th:href="@{/todo/calendar}">今月</a>
                 <a class="btn btn-outline-primary quest-button" th:if="${nextMonth != null}"
                    th:href="@{/todo/calendar(month=${nextMonth.toString()})}">翌月</a>
             </nav>
@@ -63,7 +63,7 @@
                             <div class="calendar-holiday" th:text="${day.holidayName ?: ''}"></div>
                             <div class="calendar-task-list">
                                 <a th:each="task : ${day.visibleTasks}" class="calendar-task"
-                                   th:href="@{/todo/{id}(id=${task.id})}" th:text="${task.title}"
+                                   th:href="@{/todo/{id}(id=${task.id},returnMonth=${calendar.month.toString()},returnDate=${day.date.toString()})}" th:text="${task.title}"
                                    th:style="|--calendar-category: ${task.categoryColor ?: '#8097b8'};|"
                                    th:attr="data-status=${task.status.name()},data-overdue=${!task.status.completed and task.dueDate.isBefore(today)}">
                                     タスク名
@@ -77,14 +77,18 @@
             </div>
         </div>
 
-        <section class="mt-4" th:if="${calendar.selectedDate != null}" aria-labelledby="selected-date-title">
-            <h2 id="selected-date-title" class="quest-heading" th:text="|${calendar.selectedDate} の期限タスク|">選択日の期限タスク</h2>
+        <section id="selected-date-tasks" class="mt-4 calendar-selected-section" th:if="${calendar.selectedDate != null}" aria-labelledby="selected-date-title">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <h2 id="selected-date-title" class="quest-heading mb-0"
+                    th:text="|${calendar.selectedDate} の期限タスク（${calendar.selectedTasks.size()}件）|">選択日の期限タスク</h2>
+                <a class="btn btn-outline-primary quest-button" href="#calendar-title">カレンダー上部へ戻る</a>
+            </div>
             <p class="quest-note mb-0" th:if="${#lists.isEmpty(calendar.selectedTasks)}">この日の期限タスクはありません。</p>
             <ul class="calendar-selected-tasks" th:unless="${#lists.isEmpty(calendar.selectedTasks)}">
                 <li th:each="task : ${calendar.selectedTasks}" class="calendar-selected-task"
                     th:style="|--calendar-category: ${task.categoryColor ?: '#8097b8'};|"
                     th:attr="data-status=${task.status.name()},data-overdue=${!task.status.completed and task.dueDate.isBefore(today)}">
-                    <a th:href="@{/todo/{id}(id=${task.id})}" th:text="${task.title}">タスク名</a>
+                    <a th:href="@{/todo/{id}(id=${task.id},returnMonth=${calendar.month.toString()},returnDate=${calendar.selectedDate.toString()})}" th:text="${task.title}">タスク名</a>
                     <p class="calendar-task-meta">
                         <span th:text="${task.status.label}">未着手</span>
                         <span th:if="${task.categoryName}" th:text="|カテゴリ: ${task.categoryName}|">カテゴリ</span>
@@ -95,5 +99,8 @@
         </section>
     </section>
 </main>
+<script th:if="${calendar.selectedDate != null}">
+    document.getElementById('selected-date-tasks')?.scrollIntoView({block: 'start'});
+</script>
 </body>
 </html>

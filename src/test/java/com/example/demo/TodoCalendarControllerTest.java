@@ -1,6 +1,8 @@
 package com.example.demo;
 
 import java.time.LocalDate;
+import java.time.Instant;
+import java.time.YearMonth;
 import java.util.Map;
 import java.util.Set;
 
@@ -57,9 +59,13 @@ class TodoCalendarControllerTest {
 				.andExpect(content().string(containsString("Calendar parent task")))
 				.andExpect(content().string(containsString("Calendar child task")))
 				.andExpect(content().string(containsString("ほか1件")))
-				.andExpect(content().string(containsString("2026-11-15 の期限タスク")))
-				.andExpect(content().string(containsString("href=\"/todo/" + parent.getId() + "\"")))
-				.andExpect(content().string(containsString("href=\"/todo/" + child.getId() + "\"")));
+				.andExpect(content().string(containsString("2026-11-15 の期限タスク（4件）")))
+				.andExpect(content().string(containsString("id=\"selected-date-tasks\"")))
+				.andExpect(content().string(containsString("カレンダー上部へ戻る")))
+				.andExpect(content().string(containsString("href=\"/todo/" + parent.getId()
+						+ "?returnMonth=2026-11&amp;returnDate=2026-11-15\"")))
+				.andExpect(content().string(containsString("href=\"/todo/" + child.getId()
+						+ "?returnMonth=2026-11&amp;returnDate=2026-11-15\"")));
 	}
 
 	@Test
@@ -79,6 +85,30 @@ class TodoCalendarControllerTest {
 		mockMvc.perform(get("/todo/dashboard").with(user("calendar-tester").roles("USER")))
 				.andExpect(status().isOk())
 				.andExpect(content().string(containsString("href=\"/todo/calendar\"")));
+	}
+
+	@Test
+	void showsThisAndNextMonthsInTheDashboardMiniCalendarAndLinksDueDates() throws Exception {
+		LocalDate today = TodoController.businessDate(Instant.now());
+		YearMonth thisMonth = YearMonth.from(today);
+		YearMonth nextMonth = thisMonth.plusMonths(1);
+		Todo dueToday = insert("Mini calendar due task", TodoStatus.NOT_STARTED, today, null);
+
+		mockMvc.perform(get("/todo/dashboard").with(user("calendar-tester").roles("USER")))
+				.andExpect(status().isOk())
+				.andExpect(content().string(containsString("暦の見張り台")))
+				.andExpect(content().string(containsString(thisMonth.getYear() + "年" + thisMonth.getMonthValue() + "月")))
+				.andExpect(content().string(containsString(nextMonth.getYear() + "年" + nextMonth.getMonthValue() + "月")))
+				.andExpect(content().string(containsString("mini-calendar-task-dot")))
+				.andExpect(content().string(containsString("href=\"/todo/calendar?month=" + thisMonth
+						+ "&amp;date=" + today + "\"")));
+
+		mockMvc.perform(get("/todo/" + dueToday.getId()).with(user("calendar-tester").roles("USER"))
+				.param("returnMonth", thisMonth.toString()).param("returnDate", today.toString()))
+				.andExpect(status().isOk())
+				.andExpect(content().string(containsString("カレンダーに戻る")))
+				.andExpect(content().string(containsString("/todo/calendar?month=" + thisMonth + "&amp;date="
+						+ today + "#selected-date-tasks")));
 	}
 
 	private Todo insert(String title, TodoStatus status, LocalDate dueDate, Long parentId) {

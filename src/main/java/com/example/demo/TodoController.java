@@ -112,7 +112,13 @@ public class TodoController {
 
 	@GetMapping("/dashboard")
 	public String dashboard(Model model) {
-		model.addAttribute("dashboard", todoService.loadDashboard(businessDate(Instant.now())));
+		LocalDate today = businessDate(Instant.now());
+		List<Todo> todos = todoService.findForKanban();
+		List<TodoCalendar> miniCalendars = buildMiniCalendars(today, todos);
+		model.addAttribute("dashboard", todoService.loadDashboard(today));
+		model.addAttribute("miniCalendars", miniCalendars);
+		model.addAttribute("miniCalendarHolidayInformationUnavailable",
+				miniCalendars.stream().anyMatch(TodoCalendar::holidayInformationUnavailable));
 		model.addAttribute("statusOptions", TodoStatus.values());
 		return "todo/dashboard";
 	}
@@ -214,12 +220,7 @@ public class TodoController {
 		}
 
 		List<Todo> todos = todoService.findForKanban();
-		Map<LocalDate, List<Todo>> todosByDueDate = new HashMap<>();
-		for (Todo todo : todos) {
-			if (todo.getDueDate() != null && YearMonth.from(todo.getDueDate()).equals(displayMonth)) {
-				todosByDueDate.computeIfAbsent(todo.getDueDate(), ignored -> new ArrayList<>()).add(todo);
-			}
-		}
+		Map<LocalDate, List<Todo>> todosByDueDate = todosForMonth(todos, displayMonth);
 		HolidayPeriod holidays = holidayService.findHolidays(displayMonth.atDay(1), displayMonth.atEndOfMonth());
 		TodoCalendar calendar = buildCalendar(displayMonth, today, selectedDate, todosByDueDate, holidays);
 		model.addAttribute("calendar", calendar);
@@ -250,6 +251,24 @@ public class TodoController {
 		List<Todo> selectedTasks = selectedDate == null ? List.of()
 				: List.copyOf(todosByDueDate.getOrDefault(selectedDate, List.of()));
 		return new TodoCalendar(month, weeks, selectedDate, selectedTasks, !holidays.unavailableYears().isEmpty());
+	}
+
+	private List<TodoCalendar> buildMiniCalendars(LocalDate today, List<Todo> todos) {
+		YearMonth currentMonth = YearMonth.from(today);
+		return List.of(currentMonth, currentMonth.plusMonths(1)).stream()
+				.map(month -> buildCalendar(month, today, null, todosForMonth(todos, month),
+						holidayService.findHolidays(month.atDay(1), month.atEndOfMonth())))
+				.toList();
+	}
+
+	private Map<LocalDate, List<Todo>> todosForMonth(List<Todo> todos, YearMonth month) {
+		Map<LocalDate, List<Todo>> todosByDueDate = new HashMap<>();
+		for (Todo todo : todos) {
+			if (todo.getDueDate() != null && YearMonth.from(todo.getDueDate()).equals(month)) {
+				todosByDueDate.computeIfAbsent(todo.getDueDate(), ignored -> new ArrayList<>()).add(todo);
+			}
+		}
+		return todosByDueDate;
 	}
 
 	private Map<Long, String> buildDisplayNumbers(List<Todo> orderedTodos) {
@@ -283,13 +302,32 @@ public class TodoController {
 	}
 
 	@GetMapping("/{id:\\d+}")
-	public String detail(@PathVariable Long id, Model model) {
+	public String detail(@PathVariable Long id,
+			@RequestParam(required = false) String returnMonth,
+			@RequestParam(required = false) String returnDate, Model model) {
 		Todo todo = todoService.findById(id);
 		if (todo == null) {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "指定したタスクが見つかりません。");
 		}
 		model.addAttribute("todo", todo);
+		addCalendarReturnUrl(model, returnMonth, returnDate);
 		return "todo/detail";
+	}
+
+	private void addCalendarReturnUrl(Model model, String returnMonth, String returnDate) {
+		if (returnMonth == null || returnDate == null) {
+			return;
+		}
+		try {
+			YearMonth month = TodoGantt.parseMonth(returnMonth);
+			LocalDate date = LocalDate.parse(returnDate);
+			if (YearMonth.from(date).equals(month)) {
+				model.addAttribute("calendarReturnUrl", "/todo/calendar?month=" + month + "&date=" + date
+						+ "#selected-date-tasks");
+			}
+		} catch (IllegalArgumentException | DateTimeParseException exception) {
+			// Ignore invalid optional return locations and keep the normal detail page available.
+		}
 	}
 
 	@GetMapping("/{id}/edit")
