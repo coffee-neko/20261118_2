@@ -19,18 +19,20 @@ public class InitialUserInitializer implements ApplicationRunner {
 	private final String initialPassword;
 
 	public InitialUserInitializer(UserMapper userMapper, PasswordEncoder passwordEncoder,
-			@Value("${APP_INITIAL_USERNAME:}") String initialUsername,
-			@Value("${APP_INITIAL_PASSWORD:}") String initialPassword) {
+			@Value("${APP_INITIAL_USERNAME:}") String environmentUsername,
+			@Value("${APP_INITIAL_PASSWORD:}") String environmentPassword,
+			@Value("${app.initial.username:}") String configuredUsername,
+			@Value("${app.initial.password:}") String configuredPassword) {
 		this.userMapper = userMapper;
 		this.passwordEncoder = passwordEncoder;
-		this.initialUsername = initialUsername;
-		this.initialPassword = initialPassword;
+		this.initialUsername = environmentUsername.isBlank() ? configuredUsername : environmentUsername;
+		this.initialPassword = environmentPassword.isBlank() ? configuredPassword : environmentPassword;
 	}
 
 	@Override
 	public void run(ApplicationArguments args) {
 		if (initialUsername.isBlank() || initialPassword.isBlank()) {
-			throw new IllegalStateException("APP_INITIAL_USERNAME and APP_INITIAL_PASSWORD must be set.");
+			throw new IllegalStateException("Initial login credentials must be configured.");
 		}
 		if (userMapper.findByUsername(initialUsername) != null) {
 			return;
